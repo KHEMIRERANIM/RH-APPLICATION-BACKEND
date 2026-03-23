@@ -14,7 +14,8 @@ import tn.esprit.rh_rse.repository.UserRepository;
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+
+@CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
 
     private final UserRepository userRepository;

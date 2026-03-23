@@ -39,4 +39,6 @@ public class User {
     private LocalDateTime dateEmbauche;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+
 }
