@@ -158,4 +158,7 @@ public class UserServiceImpl implements UserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
+    }
 }

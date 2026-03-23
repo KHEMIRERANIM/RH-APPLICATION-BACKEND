@@ -71,4 +71,9 @@ public class UserController {
             @PathVariable String departement) {
         return ResponseEntity.ok(userService.getUsersByDepartement(departement));
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -18,4 +18,6 @@ public interface UserService {
     void changePassword(String id, ChangePasswordRequest request);
     List<UserResponse> getUsersByRole(Role role);
     List<UserResponse> getUsersByDepartement(String departement);
+    void deleteUser(String id);
+
 }
