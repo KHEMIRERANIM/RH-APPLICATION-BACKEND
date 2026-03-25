@@ -6,6 +6,7 @@ import tn.esprit.rh_rse.entity.enums.Role;
 import tn.esprit.rh_rse.entity.enums.UserStatus;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -22,4 +23,7 @@ public class UserResponse {
     private String photoUrl;
     private LocalDateTime dateEmbauche;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private List<String> regime;
+    private List<String> allergies;
 }

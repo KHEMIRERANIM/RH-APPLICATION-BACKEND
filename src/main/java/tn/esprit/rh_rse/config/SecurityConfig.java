@@ -1,6 +1,6 @@
 package tn.esprit.rh_rse.config;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -16,11 +16,13 @@ import tn.esprit.rh_rse.config.jwt.JwtFilter;
 
 @Configuration
 @EnableWebSecurity
-@RequiredArgsConstructor
-public class SecurityConfig {
+public class SecurityConfig {   // supprime @RequiredArgsConstructor
 
-    private final JwtFilter jwtFilter;
-    private final JwtAuthEntryPoint jwtAuthEntryPoint;
+    @Autowired
+    private JwtFilter jwtFilter;
+
+    @Autowired
+    private JwtAuthEntryPoint jwtAuthEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -38,12 +40,16 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // Public
                         .requestMatchers("/api/auth/**").permitAll()
+                        // Autoriser tes endpoints Restauration sans token pour tester
+                        .requestMatchers("/api/menus/**").permitAll()
+                        .requestMatchers("/api/commandes/**").permitAll()
+                        .requestMatchers("/api/avis/**").permitAll()
                         // Admin seulement
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users/department/**").hasRole("ADMIN")
-                        // Admin ou Employé — tout le reste
+                        // Admin ou Employé
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "EMPLOYE")
                         .anyRequest().authenticated()
                 )

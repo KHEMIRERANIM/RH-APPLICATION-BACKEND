@@ -1,7 +1,6 @@
 package tn.esprit.rh_rse.config;
 
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
@@ -13,16 +12,19 @@ import tn.esprit.rh_rse.repository.UserRepository;
 import java.time.LocalDateTime;
 
 @Component
-@RequiredArgsConstructor
-@Slf4j
 public class DataInitializer implements CommandLineRunner {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
+
         if (!userRepository.existsByEmail("admin@entreprise.tn")) {
+
             User admin = User.builder()
                     .nom("Admin")
                     .prenom("Principal")
@@ -38,9 +40,9 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             userRepository.save(admin);
-            log.info("✅ Admin créé : admin@entreprise.tn / admin123");
+            System.out.println("Admin créé : admin@entreprise.tn / admin123");
         } else {
-            log.info("✅ Admin existe déjà — aucune action nécessaire");
+            System.out.println("Admin existe déjà — aucune action nécessaire");
         }
     }
 }

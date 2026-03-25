@@ -1,17 +1,17 @@
 package tn.esprit.rh_rse.service.impl;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.dto.request.ChangePasswordRequest;
 import tn.esprit.rh_rse.dto.request.CreateUserRequest;
 import tn.esprit.rh_rse.dto.request.UpdateUserRequest;
 import tn.esprit.rh_rse.dto.response.UserResponse;
-import tn.esprit.rh_rse.exception.EmailAlreadyExistsException;
-import tn.esprit.rh_rse.exception.UserNotFoundException;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.entity.enums.Role;
 import tn.esprit.rh_rse.entity.enums.UserStatus;
+import tn.esprit.rh_rse.exception.EmailAlreadyExistsException;
+import tn.esprit.rh_rse.exception.UserNotFoundException;
 import tn.esprit.rh_rse.repository.UserRepository;
 import tn.esprit.rh_rse.service.UserService;
 
@@ -20,14 +20,17 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     @Override
     public UserResponse createUser(CreateUserRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new EmailAlreadyExistsException(
                     "L'email " + request.getEmail() + " est déjà utilisé"
@@ -48,6 +51,8 @@ public class UserServiceImpl implements UserService {
                 .dateEmbauche(LocalDateTime.now())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
+                .regime(request.getRegime())
+                .allergies(request.getAllergies())
                 .build();
 
         return toResponse(userRepository.save(user));
@@ -72,6 +77,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponse updateUser(String id, UpdateUserRequest request) {
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(
                         "Utilisateur avec l'ID " + id + " introuvable"
@@ -83,6 +89,9 @@ public class UserServiceImpl implements UserService {
         if (request.getPoste() != null) user.setPoste(request.getPoste());
         if (request.getManagerId() != null) user.setManagerId(request.getManagerId());
         if (request.getPhotoUrl() != null) user.setPhotoUrl(request.getPhotoUrl());
+        if (request.getRegime() != null) user.setRegime(request.getRegime());
+        if (request.getAllergies() != null) user.setAllergies(request.getAllergies());
+
         user.setUpdatedAt(LocalDateTime.now());
 
         return toResponse(userRepository.save(user));
@@ -94,6 +103,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException(
                         "Utilisateur avec l'ID " + id + " introuvable"
                 ));
+
         user.setStatus(UserStatus.INACTIF);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
@@ -105,6 +115,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new UserNotFoundException(
                         "Utilisateur avec l'ID " + id + " introuvable"
                 ));
+
         user.setStatus(UserStatus.ACTIF);
         user.setUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
@@ -112,6 +123,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void changePassword(String id, ChangePasswordRequest request) {
+
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException(
                         "Utilisateur avec l'ID " + id + " introuvable"
@@ -123,6 +135,7 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(passwordEncoder.encode(request.getNouveauPassword()));
         user.setUpdatedAt(LocalDateTime.now());
+
         userRepository.save(user);
     }
 
@@ -142,6 +155,12 @@ public class UserServiceImpl implements UserService {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public void deleteUser(String id) {
+        userRepository.deleteById(id);
+    }
+
+    // Conversion User -> UserResponse avec builder
     private UserResponse toResponse(User user) {
         return UserResponse.builder()
                 .id(user.getId())
@@ -156,9 +175,9 @@ public class UserServiceImpl implements UserService {
                 .photoUrl(user.getPhotoUrl())
                 .dateEmbauche(user.getDateEmbauche())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .regime(user.getRegime())
+                .allergies(user.getAllergies())
                 .build();
-    }
-    public void deleteUser(String id) {
-        userRepository.deleteById(id);
     }
 }
