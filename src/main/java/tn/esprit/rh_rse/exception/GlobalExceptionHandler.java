@@ -14,28 +14,43 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUserNotFound(UserNotFoundException ex) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("status", 404);
-        error.put("message", ex.getMessage());
-        error.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<Map<String, Object>> handleEmailExists(EmailAlreadyExistsException ex) {
-        Map<String, Object> error = new HashMap<>();
-        error.put("status", 409);
-        error.put("message", ex.getMessage());
-        error.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    // NOUVEAU
+    @ExceptionHandler(OffreNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleOffreNotFound(OffreNotFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    // NOUVEAU
+    @ExceptionHandler(PartenaireNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePartenaireNotFound(PartenaireNotFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    // NOUVEAU
+    @ExceptionHandler(PlacesIndisponiblesException.class)
+    public ResponseEntity<Map<String, Object>> handlePlacesIndisponibles(PlacesIndisponiblesException ex) {
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
+        ex.printStackTrace(); // Log the exact error in IntelliJ
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Erreur interne du serveur: " + ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> buildError(HttpStatus status, String message) {
         Map<String, Object> error = new HashMap<>();
-        error.put("status", 500);
-        error.put("message", "Erreur interne du serveur");
+        error.put("status", status.value());
+        error.put("message", message);
         error.put("timestamp", LocalDateTime.now());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        return ResponseEntity.status(status).body(error);
     }
 }
