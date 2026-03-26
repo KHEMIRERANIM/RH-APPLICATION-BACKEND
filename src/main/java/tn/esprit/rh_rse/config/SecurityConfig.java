@@ -36,15 +36,20 @@ public class SecurityConfig {
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(jwtAuthEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Public
+                        // Public endpoints
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/menus/**").permitAll() // <-- CRUD menus accessible sans JWT
+
                         // Admin seulement
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users/department/**").hasRole("ADMIN")
+
                         // Admin ou Employé — tout le reste
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "EMPLOYE")
+
+                        // Tout le reste requiert authentification
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
