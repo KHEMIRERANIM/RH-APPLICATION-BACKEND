@@ -16,7 +16,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = "*")
 public class UserController {
 
     private final UserService userService;
@@ -70,10 +70,5 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getUsersByDepartement(
             @PathVariable String departement) {
         return ResponseEntity.ok(userService.getUsersByDepartement(departement));
-    }
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
-        userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
     }
 }

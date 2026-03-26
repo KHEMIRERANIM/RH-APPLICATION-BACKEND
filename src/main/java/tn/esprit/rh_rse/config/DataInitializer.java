@@ -30,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
                     .prenom("Principal")
                     .email("admin@entreprise.tn")
                     .password(passwordEncoder.encode("admin123"))
+                    .telephone("00000000")
                     .role(Role.ADMIN)
                     .status(UserStatus.ACTIF)
                     .departement("Direction")
@@ -40,9 +41,9 @@ public class DataInitializer implements CommandLineRunner {
                     .build();
 
             userRepository.save(admin);
-            System.out.println("Admin créé : admin@entreprise.tn / admin123");
+            System.out.println("Admin cree : admin@entreprise.tn / admin123");
         } else {
-            System.out.println("Admin existe déjà — aucune action nécessaire");
+            System.out.println("Admin existe deja - aucune action necessaire");
         }
     }
 }

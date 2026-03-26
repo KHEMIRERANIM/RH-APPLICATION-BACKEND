@@ -23,6 +23,8 @@ public class User {
     private String prenom;
     private String email;
     private String password;
+    private String telephone;
+    private String adresse;
 
     private Role role;
     private UserStatus status;

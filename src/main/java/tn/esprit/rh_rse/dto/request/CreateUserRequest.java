@@ -2,7 +2,6 @@ package tn.esprit.rh_rse.dto.request;
 
 import lombok.Data;
 import tn.esprit.rh_rse.entity.enums.Role;
-import java.util.List;
 
 @Data
 public class CreateUserRequest {
@@ -15,6 +14,4 @@ public class CreateUserRequest {
     private String poste;
     private String managerId;
     private String photoUrl;
-    private List<String> regime;      // ajouté
-    private List<String> allergies;   // ajouté
 }

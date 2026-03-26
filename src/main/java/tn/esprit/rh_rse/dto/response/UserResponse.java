@@ -14,6 +14,7 @@ public class UserResponse {
     private String id;
     private String nom;
     private String prenom;
+    private String telephone;
     private String email;
     private Role role;
     private UserStatus status;
@@ -21,6 +22,7 @@ public class UserResponse {
     private String poste;
     private String managerId;
     private String photoUrl;
+    private String adresse;
     private LocalDateTime dateEmbauche;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
