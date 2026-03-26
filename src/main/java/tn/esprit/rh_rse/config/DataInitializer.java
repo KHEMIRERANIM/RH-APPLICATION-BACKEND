@@ -28,6 +28,7 @@ public class DataInitializer implements CommandLineRunner {
                     .prenom("Principal")
                     .email("admin@entreprise.tn")
                     .password(passwordEncoder.encode("admin123"))
+                    .telephone("00000000")
                     .role(Role.ADMIN)
                     .status(UserStatus.ACTIF)
                     .departement("Direction")

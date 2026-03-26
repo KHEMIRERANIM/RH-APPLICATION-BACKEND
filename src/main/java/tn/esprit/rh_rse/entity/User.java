@@ -26,6 +26,8 @@ public class User {
     private String email;
 
     private String password;
+    private String telephone;
+    private String adresse;
 
     private Role role;
 
