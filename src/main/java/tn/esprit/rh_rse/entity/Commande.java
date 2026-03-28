@@ -22,9 +22,9 @@ public class Commande {
     private String menuId;
 
     @NotEmpty(message = "La commande doit contenir au moins un plat")
-    private List<String> plats;         // liste des platId choisis
+    private List<String> plats;
 
-    @NotNull(message = "La date de commande est obligatoire")
+    //  Plus de @NotNull — le service set la date automatiquement
     private LocalDate dateCommande;
 
     @Pattern(regexp = "en_attente|confirmee|prete|livree",
