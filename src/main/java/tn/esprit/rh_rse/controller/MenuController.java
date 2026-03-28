@@ -46,12 +46,22 @@ public class MenuController {
         return ResponseEntity.ok(menuService.update(id, menu));
     }
 
+    // ✅ AJOUTER PLAT
     @PostMapping("/{menuId}/plats")
     public ResponseEntity<Menu> ajouterPlat(@PathVariable String menuId,
                                             @Valid @RequestBody Plat plat) {
         return ResponseEntity.ok(menuService.ajouterPlat(menuId, plat));
     }
 
+    // ✅ NOUVEAU : UPDATE PLAT (CORRECTION)
+    @PutMapping("/{menuId}/plats/{platId}")
+    public ResponseEntity<Menu> updatePlat(@PathVariable String menuId,
+                                           @PathVariable String platId,
+                                           @Valid @RequestBody Plat plat) {
+        return ResponseEntity.ok(menuService.updatePlat(menuId, platId, plat));
+    }
+
+    // ✅ SUPPRIMER PLAT
     @DeleteMapping("/{menuId}/plats/{platId}")
     public ResponseEntity<Menu> supprimerPlat(@PathVariable String menuId,
                                               @PathVariable String platId) {

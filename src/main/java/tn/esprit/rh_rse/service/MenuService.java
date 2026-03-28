@@ -11,11 +11,16 @@ public interface MenuService {
     Menu save(Menu menu);
     Menu update(String id, Menu menu);
     void delete(String id);
+
     Menu ajouterPlat(String menuId, Plat plat);
     Menu supprimerPlat(String menuId, String platId);
+
+
+    Menu updatePlat(String menuId, String platId, Plat plat);
+
     List<Menu> getMenusPublies();
 
-    // Nouveaux endpoints
+
     List<Plat> getPlatsByRegime(String menuId, String regime);
     List<Menu> getMenusSuggestion(String userId);
 }

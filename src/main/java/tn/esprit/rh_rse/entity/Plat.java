@@ -4,7 +4,10 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 import java.util.List;
 
-@Data @Builder @NoArgsConstructor @AllArgsConstructor
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Plat {
 
     private String platId;
@@ -18,7 +21,8 @@ public class Plat {
     @Positive(message = "Le prix doit être positif")
     private Double prix;
 
-    private List<String> tags;      // ["diabetique", "sans_gluten"]
+    private List<String> tags;  // ["diabetique", "sans_gluten"]
+
     private String image;
 
     private Boolean disponible = true;

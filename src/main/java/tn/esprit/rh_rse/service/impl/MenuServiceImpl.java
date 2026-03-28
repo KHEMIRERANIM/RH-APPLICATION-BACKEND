@@ -57,6 +57,29 @@ public class MenuServiceImpl implements MenuService {
         return menuRepository.save(menu);
     }
 
+    // ✅ NOUVELLE MÉTHODE (IMPORTANT)
+    @Override
+    public Menu updatePlat(String menuId, String platId, Plat platUpdated) {
+        Menu menu = getById(menuId);
+
+        for (Plat plat : menu.getPlats()) {
+            if (plat.getPlatId().equals(platId)) {
+
+                plat.setNom(platUpdated.getNom());
+                plat.setDescription(platUpdated.getDescription());
+                plat.setPrix(platUpdated.getPrix());
+                plat.setTags(platUpdated.getTags());
+                plat.setImage(platUpdated.getImage());
+                plat.setDisponible(platUpdated.getDisponible());
+                plat.setQuantite(platUpdated.getQuantite());
+
+                break;
+            }
+        }
+
+        return menuRepository.save(menu);
+    }
+
     @Override
     public Menu supprimerPlat(String menuId, String platId) {
         Menu menu = getById(menuId);
