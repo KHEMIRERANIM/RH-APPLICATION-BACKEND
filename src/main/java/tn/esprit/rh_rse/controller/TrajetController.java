@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/trajets")
 @RequiredArgsConstructor
-@CrossOrigin("*")
+@CrossOrigin(origins = "http://localhost:4200", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class TrajetController {
 
     private final TrajetService trajetService;

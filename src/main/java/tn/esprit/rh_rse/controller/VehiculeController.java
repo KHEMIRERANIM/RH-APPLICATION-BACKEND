@@ -11,7 +11,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/vehicules")
 @RequiredArgsConstructor
-@CrossOrigin("*")
+@CrossOrigin(origins = "http://localhost:4200", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class VehiculeController {
 
     private final VehiculeService vehiculeService;

@@ -8,10 +8,11 @@ import tn.esprit.rh_rse.entity.Reservation;
 import tn.esprit.rh_rse.entity.Trajet;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.entity.enums.StatutTrajet;
+import tn.esprit.rh_rse.entity.enums.TypeNotification;
 import tn.esprit.rh_rse.repository.ReservationRepository;
 import tn.esprit.rh_rse.repository.TrajetRepository;
-import tn.esprit.rh_rse.service.ReservationService; // ← import de l'interface
-
+import tn.esprit.rh_rse.service.NotificationService;
+import tn.esprit.rh_rse.service.ReservationService;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -24,6 +25,7 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final TrajetRepository trajetRepository;
+    private final NotificationService notificationService; // ← ajouté
 
     // ─── MAPPER Entity → Response ──────────────────────────
     private ReservationResponse toResponse(Reservation r) {
@@ -92,7 +94,28 @@ public class ReservationServiceImpl implements ReservationService {
                 .dateCalcul(LocalDate.now())
                 .build();
 
-        return toResponse(reservationRepository.save(reservation));
+        Reservation saved = reservationRepository.save(reservation);
+
+        // ─── Notifications automatiques ────────────────────
+
+        // 1. Notifier le passager
+        notificationService.envoyerNotification(
+                request.getEmployeId(),
+                "SYSTEME",
+                request.getTrajetId(),
+                TypeNotification.RESERVATION,
+                "Votre demande de réservation est en attente"
+        );
+
+        // 2. Notifier le conducteur pour confirmation
+        notificationService.envoyerDemandeConfirmation(
+                trajet.getEmployeId(),
+                request.getEmployeId(),
+                request.getTrajetId(),
+                saved.getId()
+        );
+
+        return toResponse(saved);
     }
 
     @Override
@@ -110,6 +133,25 @@ public class ReservationServiceImpl implements ReservationService {
                 }
                 trajetRepository.save(trajet);
             });
+        }
+
+        // ─── Notifications selon statut ────────────────────
+        if (request.getStatut() == StatutReservation.CONFIRME) {
+            notificationService.envoyerNotification(
+                    existing.getEmployeId(),
+                    "SYSTEME",
+                    existing.getTrajetId(),
+                    TypeNotification.RESERVATION,
+                    "Votre réservation a été confirmée ✅"
+            );
+        } else if (request.getStatut() == StatutReservation.ANNULE) {
+            notificationService.envoyerNotification(
+                    existing.getEmployeId(),
+                    "SYSTEME",
+                    existing.getTrajetId(),
+                    TypeNotification.RESERVATION,
+                    "Votre réservation a été annulée ❌"
+            );
         }
 
         existing.setStatut(request.getStatut());
