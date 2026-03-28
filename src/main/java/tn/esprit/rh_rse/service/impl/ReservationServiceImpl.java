@@ -4,13 +4,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.dto.request.ReservationRequest;
 import tn.esprit.rh_rse.dto.response.ReservationResponse;
+import tn.esprit.rh_rse.entity.EmpreinteCarbone;
 import tn.esprit.rh_rse.entity.Reservation;
 import tn.esprit.rh_rse.entity.Trajet;
+import tn.esprit.rh_rse.entity.enums.RoleTrajet;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.entity.enums.StatutTrajet;
+import tn.esprit.rh_rse.entity.enums.TypeCarburant;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
 import tn.esprit.rh_rse.repository.ReservationRepository;
 import tn.esprit.rh_rse.repository.TrajetRepository;
+import tn.esprit.rh_rse.repository.VehiculeRepository;
+import tn.esprit.rh_rse.service.EmpreinteCarboneService;
 import tn.esprit.rh_rse.service.NotificationService;
 import tn.esprit.rh_rse.service.ReservationService;
 
@@ -18,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import tn.esprit.rh_rse.entity.Vehicule;
 
 @Service
 @RequiredArgsConstructor
@@ -25,9 +31,10 @@ public class ReservationServiceImpl implements ReservationService {
 
     private final ReservationRepository reservationRepository;
     private final TrajetRepository trajetRepository;
-    private final NotificationService notificationService; // ← ajouté
+    private final VehiculeRepository vehiculeRepository;
+    private final EmpreinteCarboneService empreinteCarboneService;
+    private final NotificationService notificationService;
 
-    // ─── MAPPER Entity → Response ──────────────────────────
     private ReservationResponse toResponse(Reservation r) {
         return ReservationResponse.builder()
                 .id(r.getId())
@@ -53,36 +60,33 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public ReservationResponse getById(String id) {
         Reservation r = reservationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Réservation non trouvée : " + id));
+                .orElseThrow(() -> new RuntimeException("Reservation introuvable : " + id));
         return toResponse(r);
     }
 
     @Override
     public ReservationResponse create(ReservationRequest request) {
-        // Vérifier que le trajet existe
         Trajet trajet = trajetRepository.findById(request.getTrajetId())
-                .orElseThrow(() -> new RuntimeException("Trajet non trouvé"));
+                .orElseThrow(() -> new RuntimeException("Trajet introuvable"));
 
-        // Vérifier les places disponibles
+        System.out.println("=== DISTANCE RECUE : " + request.getDistanceKm());
+
         if (trajet.getPlacesRestantes() <= 0) {
             throw new RuntimeException("Plus de places disponibles");
         }
 
-        // Décrémenter les places
         trajet.setPlacesRestantes(trajet.getPlacesRestantes() - 1);
         if (trajet.getPlacesRestantes() == 0) {
             trajet.setStatut(StatutTrajet.COMPLET);
         }
         trajetRepository.save(trajet);
 
-        // Calcul CO2 automatique
-        double distanceKm   = 25.0;
+        double distanceKm   = request.getDistanceKm() != null ? request.getDistanceKm() : 25.0;
         double co2Solo      = distanceKm * 0.21;
         double co2Covoit    = distanceKm * 0.05;
         double co2Economise = co2Solo - co2Covoit;
         int points          = (int) (co2Economise * 10);
 
-        // Mapper Request → Entity
         Reservation reservation = Reservation.builder()
                 .trajetId(request.getTrajetId())
                 .employeId(request.getEmployeId())
@@ -92,22 +96,21 @@ public class ReservationServiceImpl implements ReservationService {
                 .co2EconomiseKg(co2Economise)
                 .pointsEco(points)
                 .dateCalcul(LocalDate.now())
+                .distanceKm(distanceKm) // ← ajouter
+
                 .build();
+
 
         Reservation saved = reservationRepository.save(reservation);
 
-        // ─── Notifications automatiques ────────────────────
-
-        // 1. Notifier le passager
         notificationService.envoyerNotification(
                 request.getEmployeId(),
                 "SYSTEME",
                 request.getTrajetId(),
                 TypeNotification.RESERVATION,
-                "Votre demande de réservation est en attente"
+                "Votre demande de reservation est en attente"
         );
 
-        // 2. Notifier le conducteur pour confirmation
         notificationService.envoyerDemandeConfirmation(
                 trajet.getEmployeId(),
                 request.getEmployeId(),
@@ -121,9 +124,9 @@ public class ReservationServiceImpl implements ReservationService {
     @Override
     public ReservationResponse update(String id, ReservationRequest request) {
         Reservation existing = reservationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Réservation non trouvée : " + id));
+                .orElseThrow(() -> new RuntimeException("Reservation introuvable : " + id));
 
-        // Si annulation → remettre la place dans le trajet
+        // Annulation : remettre la place
         if (request.getStatut() == StatutReservation.ANNULE
                 && existing.getStatut() != StatutReservation.ANNULE) {
             trajetRepository.findById(existing.getTrajetId()).ifPresent(trajet -> {
@@ -135,14 +138,59 @@ public class ReservationServiceImpl implements ReservationService {
             });
         }
 
-        // ─── Notifications selon statut ────────────────────
+        // Confirmation : creer les empreintes carbone
+        if (request.getStatut() == StatutReservation.CONFIRME
+                && existing.getStatut() != StatutReservation.CONFIRME) {
+
+            trajetRepository.findById(existing.getTrajetId()).ifPresent(trajet -> {
+
+                // APRES
+                TypeCarburant typeCarburant = vehiculeRepository
+                        .findById(trajet.getVehiculeId() != null ? trajet.getVehiculeId() : "")
+                        .map(Vehicule::getTypeCarburant)
+
+                        .orElse(TypeCarburant.ESSENCE);
+
+                int nbPassagers = Math.max(1,
+                        trajet.getPlacesDisponibles() - trajet.getPlacesRestantes());
+
+                double distanceKm = (existing.getDistanceKm() != null && existing.getDistanceKm() > 0)
+                        ? existing.getDistanceKm()
+                        : 25.0;
+
+
+
+                empreinteCarboneService.create(
+                        EmpreinteCarbone.builder()
+                                .employeId(existing.getEmployeId())
+                                .trajetId(existing.getTrajetId())
+                                .role(RoleTrajet.PASSAGER)
+                                .distanceKm(distanceKm)
+                                .nbPassagers(nbPassagers)
+                                .typeCarburant(typeCarburant)
+                                .build()
+                );
+
+                empreinteCarboneService.create(
+                        EmpreinteCarbone.builder()
+                                .employeId(trajet.getEmployeId())
+                                .trajetId(trajet.getId())
+                                .role(RoleTrajet.CONDUCTEUR)
+                                .distanceKm(distanceKm)
+                                .nbPassagers(nbPassagers)
+                                .typeCarburant(typeCarburant)
+                                .build()
+                );
+            });
+        }
+
         if (request.getStatut() == StatutReservation.CONFIRME) {
             notificationService.envoyerNotification(
                     existing.getEmployeId(),
                     "SYSTEME",
                     existing.getTrajetId(),
                     TypeNotification.RESERVATION,
-                    "Votre réservation a été confirmée ✅"
+                    "Votre reservation a ete confirmee"
             );
         } else if (request.getStatut() == StatutReservation.ANNULE) {
             notificationService.envoyerNotification(
@@ -150,7 +198,7 @@ public class ReservationServiceImpl implements ReservationService {
                     "SYSTEME",
                     existing.getTrajetId(),
                     TypeNotification.RESERVATION,
-                    "Votre réservation a été annulée ❌"
+                    "Votre reservation a ete annulee"
             );
         }
 
@@ -191,7 +239,7 @@ public class ReservationServiceImpl implements ReservationService {
     public int getTotalPointsEcoByEmploye(String employeId) {
         return reservationRepository.findByEmployeId(employeId)
                 .stream()
-                .filter(r -> r.getStatut() == StatutReservation.CONFIRME)
+                .filter(r -> r.getStatut() != StatutReservation.ANNULE)
                 .mapToInt(r -> r.getPointsEco() != null ? r.getPointsEco() : 0)
                 .sum();
     }

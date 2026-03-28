@@ -34,4 +34,7 @@ public class Reservation {
     private Integer pointsEco;
 
     private LocalDate dateCalcul;
+
+    private Double distanceKm; // ← ajouter ce champ
+
 }

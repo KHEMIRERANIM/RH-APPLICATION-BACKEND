@@ -13,4 +13,6 @@ public class ReservationRequest {
     private String trajetId;
     private String employeId;
     private StatutReservation statut;
+    private Double distanceKm; // ← ajoute cette ligne
+
 }
