@@ -21,7 +21,7 @@ public class OffreController {
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<List<Offre>> getAllActives(
-            @RequestParam(required = false) CategorieOffre categorie) {
+            @RequestParam(required = false, name = "categorie") CategorieOffre categorie) {
         if (categorie != null) {
             return ResponseEntity.ok(offreService.getByCategorie(categorie));
         }
@@ -30,13 +30,13 @@ public class OffreController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<Offre> getById(@PathVariable String id) {
+    public ResponseEntity<Offre> getById(@PathVariable("id") String id) {
         return ResponseEntity.ok(offreService.getById(id));
     }
 
     @GetMapping("/partenaire/{idPartenaire}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Offre>> getByPartenaire(@PathVariable String idPartenaire) {
+    public ResponseEntity<List<Offre>> getByPartenaire(@PathVariable("idPartenaire") String idPartenaire) {
         return ResponseEntity.ok(offreService.getByPartenaire(idPartenaire));
     }
 
@@ -50,21 +50,21 @@ public class OffreController {
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Offre> modifier(
-            @PathVariable String id,
+            @PathVariable("id") String id,
             @RequestBody Offre offre) {
         return ResponseEntity.ok(offreService.modifierOffre(id, offre));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Void> supprimer(@PathVariable String id) {
+    public ResponseEntity<Void> supprimer(@PathVariable("id") String id) {
         offreService.supprimerOffre(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle-statut")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Offre> toggleStatut(@PathVariable String id) {
+    public ResponseEntity<Offre> toggleStatut(@PathVariable("id") String id) {
         return ResponseEntity.ok(offreService.toggleStatut(id));
     }
 }

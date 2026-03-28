@@ -26,7 +26,7 @@ public class OffreServiceImpl implements OffreService {
     @Override
     public Offre creerOffre(Offre offre) {
         // Vérifier que le partenaire existe
-        Partenaire partenaire = partenaireRepository.findById(offre.getIdPartenaire())
+        partenaireRepository.findById(offre.getIdPartenaire())
                 .orElseThrow(() -> new PartenaireNotFoundException(offre.getIdPartenaire()));
 
         offre.setNbPlacesDispo(offre.getNbPlacesTotal());
@@ -56,6 +56,7 @@ public class OffreServiceImpl implements OffreService {
         existante.setLocalisation(offreModifiee.getLocalisation());
         existante.setDateDebut(offreModifiee.getDateDebut());
         existante.setDateFin(offreModifiee.getDateFin());
+        existante.setDetailsHotel(offreModifiee.getDetailsHotel());
 
         return offreRepository.save(existante);
     }

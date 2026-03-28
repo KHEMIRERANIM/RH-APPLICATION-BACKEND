@@ -15,4 +15,6 @@ public interface ReservationRepository extends MongoRepository<Reservation, Stri
 
     Optional<Reservation> findByIdUserAndIdOffreAndStatut(
             String idUser, String idOffre, StatutReservation statut);
+
+    void deleteByIdUserAndStatut(String idUser, StatutReservation statut);
 }
