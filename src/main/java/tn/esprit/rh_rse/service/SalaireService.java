@@ -1,0 +1,23 @@
+package tn.esprit.rh_rse.service;
+
+import tn.esprit.rh_rse.dto.request.BulletinSalaireRequest;
+import tn.esprit.rh_rse.dto.response.BulletinSalaireResponse;
+
+import java.util.List;
+
+public interface SalaireService {
+
+    BulletinSalaireResponse creerBulletin(BulletinSalaireRequest request);
+
+    List<BulletinSalaireResponse> getBulletinsByEmploye(String employeId);
+
+    BulletinSalaireResponse getBulletinById(String id);
+
+    BulletinSalaireResponse getBulletinByMois(String employeId, int mois, int annee);
+
+    List<BulletinSalaireResponse> getBulletinsByAnnee(String employeId, int annee);
+
+    BulletinSalaireResponse modifierBulletin(String id, BulletinSalaireRequest request);
+
+    void supprimerBulletin(String id);
+}
