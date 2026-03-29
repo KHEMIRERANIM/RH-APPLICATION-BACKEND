@@ -4,17 +4,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.entity.DetailsHotel;
 import tn.esprit.rh_rse.entity.Offre;
-import tn.esprit.rh_rse.entity.Reservation;
+import tn.esprit.rh_rse.entity.AvantageReservation;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.exception.OffreNotFoundException;
 import tn.esprit.rh_rse.exception.PlacesIndisponiblesException;
 import tn.esprit.rh_rse.repository.OffreRepository;
-import tn.esprit.rh_rse.repository.ReservationRepository;
+import tn.esprit.rh_rse.repository.AvantageReservationRepository;
 import tn.esprit.rh_rse.repository.UserRepository;
 import tn.esprit.rh_rse.service.EmailService;
 import tn.esprit.rh_rse.service.PdfGenerationService;
-import tn.esprit.rh_rse.service.ReservationService;
+import tn.esprit.rh_rse.service.AvantageReservationService;
 
 import java.time.LocalDateTime;
 import java.time.LocalDate;
@@ -23,9 +23,9 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationServiceImpl implements ReservationService {
+public class AvantageReservationServiceImpl implements AvantageReservationService {
 
-    private final ReservationRepository reservationRepository;
+    private final AvantageReservationRepository reservationRepository;
     private final OffreRepository       offreRepository;
     private final UserRepository        userRepository;
     private final PdfGenerationService  pdfGenerationService;
@@ -36,11 +36,11 @@ public class ReservationServiceImpl implements ReservationService {
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public Reservation reserverOuModifier(String idUser, String idOffre, Integer nbPersonnes) {
+    public AvantageReservation reserverOuModifier(String idUser, String idOffre, Integer nbPersonnes) {
         Offre offre = offreRepository.findById(idOffre)
                 .orElseThrow(() -> new OffreNotFoundException(idOffre));
 
-        Optional<Reservation> existante = reservationRepository
+        Optional<AvantageReservation> existante = reservationRepository
                 .findByIdUserAndIdOffreAndStatut(idUser, idOffre, StatutReservation.CONFIRMEE);
 
         if (existante.isPresent()) {
@@ -49,7 +49,7 @@ public class ReservationServiceImpl implements ReservationService {
         return creerReservationStandard(idUser, offre, nbPersonnes);
     }
 
-    private Reservation creerReservationStandard(String idUser, Offre offre, int nbPersonnes) {
+    private AvantageReservation creerReservationStandard(String idUser, Offre offre, int nbPersonnes) {
         if (offre.getNbPlacesDispo() < nbPersonnes) {
             throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
         }
@@ -57,7 +57,7 @@ public class ReservationServiceImpl implements ReservationService {
         offre.setNbPlacesDispo(offre.getNbPlacesDispo() - nbPersonnes);
         offreRepository.save(offre);
 
-        Reservation reservation = Reservation.builder()
+        AvantageReservation reservation = AvantageReservation.builder()
                 .idUser(idUser)
                 .idOffre(offre.getId())
                 .nbPersonnes(nbPersonnes)
@@ -67,12 +67,12 @@ public class ReservationServiceImpl implements ReservationService {
                 .dateReservation(LocalDateTime.now())
                 .build();
 
-        Reservation saved = reservationRepository.save(reservation);
+        AvantageReservation saved = reservationRepository.save(reservation);
         _envoyerEmail(saved, offre, idUser);
         return saved;
     }
 
-    private Reservation modifierReservationStandard(Reservation reservation, Offre offre, int nouveauNb) {
+    private AvantageReservation modifierReservationStandard(AvantageReservation reservation, Offre offre, int nouveauNb) {
         int diff = nouveauNb - reservation.getNbPersonnes();
         if (diff > 0 && offre.getNbPlacesDispo() < diff) {
             throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
@@ -90,7 +90,7 @@ public class ReservationServiceImpl implements ReservationService {
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public Reservation reserverHotel(String idUser, String idOffre,
+    public AvantageReservation reserverHotel(String idUser, String idOffre,
                                      Integer nbAdultes, Integer nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
         Offre offre = offreRepository.findById(idOffre)
                 .orElseThrow(() -> new OffreNotFoundException(idOffre));
@@ -108,7 +108,7 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RuntimeException("Le nombre de personnes doit être au moins 1");
         }
 
-        Optional<Reservation> existante = reservationRepository
+        Optional<AvantageReservation> existante = reservationRepository
                 .findByIdUserAndIdOffreAndStatut(idUser, idOffre, StatutReservation.CONFIRMEE);
 
         if (existante.isPresent()) {
@@ -117,7 +117,7 @@ public class ReservationServiceImpl implements ReservationService {
         return creerReservationHotel(idUser, offre, nbAdultes, nbEnfants, formule, checkIn, checkOut);
     }
 
-    private Reservation creerReservationHotel(String idUser, Offre offre,
+    private AvantageReservation creerReservationHotel(String idUser, Offre offre,
                                                int nbAdultes, int nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
         int nbTotal = nbAdultes + nbEnfants;
         if (offre.getNbPlacesDispo() < nbTotal) {
@@ -130,7 +130,7 @@ public class ReservationServiceImpl implements ReservationService {
         offre.setNbPlacesDispo(offre.getNbPlacesDispo() - nbTotal);
         offreRepository.save(offre);
 
-        Reservation reservation = Reservation.builder()
+        AvantageReservation reservation = AvantageReservation.builder()
                 .idUser(idUser)
                 .idOffre(offre.getId())
                 .nbPersonnes(nbTotal)
@@ -145,18 +145,18 @@ public class ReservationServiceImpl implements ReservationService {
                 .dateReservation(LocalDateTime.now())
                 .build();
 
-        Reservation saved = reservationRepository.save(reservation);
+        AvantageReservation saved = reservationRepository.save(reservation);
         _envoyerEmail(saved, offre, idUser);
         return saved;
     }
 
     @Override
-    public Reservation creerReservationHotel(String idUser, String idOffre, Integer nbPersonnesChoisi) {
+    public AvantageReservation creerReservationHotel(String idUser, String idOffre, Integer nbPersonnesChoisi) {
         // Fallback or implementation of method mistakenly added to service interface, ignoring.
         return null;
     }
 
-    private Reservation modifierReservationHotel(Reservation reservation, Offre offre,
+    private AvantageReservation modifierReservationHotel(AvantageReservation reservation, Offre offre,
                                                   int nbAdultes, int nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
         int ancienNb = reservation.getNbPersonnes();
         int nouveauNb = nbAdultes + nbEnfants;
@@ -205,8 +205,8 @@ public class ReservationServiceImpl implements ReservationService {
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public Reservation annuler(String idUser, String idReservation) {
-        Reservation reservation = reservationRepository.findById(idReservation)
+    public AvantageReservation annuler(String idUser, String idReservation) {
+        AvantageReservation reservation = reservationRepository.findById(idReservation)
                 .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
 
         if (!reservation.getIdUser().equals(idUser)) {
@@ -232,17 +232,17 @@ public class ReservationServiceImpl implements ReservationService {
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public List<Reservation> getMesReservations(String idUser) {
+    public List<AvantageReservation> getMesReservations(String idUser) {
         return reservationRepository.findByIdUser(idUser);
     }
 
     @Override
-    public List<Reservation> getAllReservations() {
+    public List<AvantageReservation> getAllReservations() {
         return reservationRepository.findAll();
     }
 
     @Override
-    public List<Reservation> getByOffre(String idOffre) {
+    public List<AvantageReservation> getByOffre(String idOffre) {
         return reservationRepository.findByIdOffre(idOffre);
     }
 
@@ -255,7 +255,7 @@ public class ReservationServiceImpl implements ReservationService {
     // HELPER PRIVÉ : envoi email/PDF
     // ══════════════════════════════════════════════════════════════════
 
-    private void _envoyerEmail(Reservation saved, Offre offre, String idUser) {
+    private void _envoyerEmail(AvantageReservation saved, Offre offre, String idUser) {
         try {
             User user = userRepository.findById(idUser).orElse(null);
             if (user != null && user.getEmail() != null) {

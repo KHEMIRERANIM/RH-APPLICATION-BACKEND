@@ -8,12 +8,12 @@ import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Document(collection = "reservations")
+@Document(collection = "avantage_reservation")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Reservation {
+public class AvantageReservation {
 
     @Id
     private String id;

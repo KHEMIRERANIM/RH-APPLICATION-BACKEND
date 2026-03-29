@@ -6,10 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.config.jwt.JwtUtil;
-import tn.esprit.rh_rse.entity.Reservation;
+import tn.esprit.rh_rse.entity.AvantageReservation;
 import tn.esprit.rh_rse.entity.Offre;
 import tn.esprit.rh_rse.entity.User;
-import tn.esprit.rh_rse.service.ReservationService;
+import tn.esprit.rh_rse.service.AvantageReservationService;
 import tn.esprit.rh_rse.service.OffreService;
 import tn.esprit.rh_rse.service.PdfGenerationService;
 import org.springframework.http.HttpHeaders;
@@ -21,11 +21,11 @@ import tn.esprit.rh_rse.repository.UserRepository;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reservations")
+@RequestMapping("/api/avantages/reservations")
 @RequiredArgsConstructor
-public class ReservationController {
+public class AvantageReservationController {
 
-    private final ReservationService reservationService;
+    private final AvantageReservationService reservationService;
     private final OffreService offreService;
     private final UserRepository userRepository;
     private final PdfGenerationService pdfGenerationService;
@@ -33,7 +33,7 @@ public class ReservationController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<Reservation> reserverOuModifier(
+    public ResponseEntity<AvantageReservation> reserverOuModifier(
             @RequestParam("idOffre") String idOffre,
             @RequestParam("nbPersonnes") Integer nbPersonnes,
             HttpServletRequest httpRequest) {
@@ -44,7 +44,7 @@ public class ReservationController {
     /** Réservation spécifique aux offres hôtelières (adultes + enfants + formule pension) */
     @PostMapping("/hotel")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<Reservation> reserverHotel(
+    public ResponseEntity<AvantageReservation> reserverHotel(
             @RequestParam("idOffre")    String  idOffre,
             @RequestParam("nbAdultes")  Integer nbAdultes,
             @RequestParam("nbEnfants")  Integer nbEnfants,
@@ -58,14 +58,14 @@ public class ReservationController {
 
     @GetMapping("/mes-reservations")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<List<Reservation>> getMesReservations(HttpServletRequest httpRequest) {
+    public ResponseEntity<List<AvantageReservation>> getMesReservations(HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
         return ResponseEntity.ok(reservationService.getMesReservations(idUser));
     }
 
     @PatchMapping("/{id}/annuler")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<Reservation> annuler(
+    public ResponseEntity<AvantageReservation> annuler(
             @PathVariable("id") String id,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
@@ -74,13 +74,13 @@ public class ReservationController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Reservation>> getAllReservations() {
+    public ResponseEntity<List<AvantageReservation>> getAllReservations() {
         return ResponseEntity.ok(reservationService.getAllReservations());
     }
 
     @GetMapping("/offre/{idOffre}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Reservation>> getByOffre(@PathVariable("idOffre") String idOffre) {
+    public ResponseEntity<List<AvantageReservation>> getByOffre(@PathVariable("idOffre") String idOffre) {
         return ResponseEntity.ok(reservationService.getByOffre(idOffre));
     }
 
@@ -109,7 +109,7 @@ public class ReservationController {
         String idUser = extraireIdUser(httpRequest);
         
         // Fetch to ensure ownership
-        Reservation r = reservationService.getMesReservations(idUser).stream()
+        AvantageReservation r = reservationService.getMesReservations(idUser).stream()
             .filter(res -> res.getId().equals(id))
             .findFirst()
             .orElseThrow(() -> new RuntimeException("Réservation non trouvée ou accès refusé."));

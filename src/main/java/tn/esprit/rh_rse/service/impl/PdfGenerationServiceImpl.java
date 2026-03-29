@@ -9,7 +9,7 @@ import com.lowagie.text.pdf.draw.LineSeparator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.entity.Offre;
-import tn.esprit.rh_rse.entity.Reservation;
+import tn.esprit.rh_rse.entity.AvantageReservation;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.service.PdfGenerationService;
 
@@ -22,7 +22,7 @@ import java.time.format.DateTimeFormatter;
 public class PdfGenerationServiceImpl implements PdfGenerationService {
 
     @Override
-    public byte[] generateReservationPdf(Reservation reservation, Offre offre, User user) {
+    public byte[] generateReservationPdf(AvantageReservation reservation, Offre offre, User user) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
             Document document = new Document(PageSize.A4, 50, 50, 60, 50);
             PdfWriter.getInstance(document, baos);
