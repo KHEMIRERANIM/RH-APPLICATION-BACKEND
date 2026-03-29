@@ -1,13 +1,13 @@
 package tn.esprit.rh_rse.config;
 
-import lombok.RequiredArgsConstructor;
+import tn.esprit.rh_rse.config.jwt.JwtAuthEntryPoint;
+import tn.esprit.rh_rse.config.jwt.JwtFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.Customizer;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,62 +16,84 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import tn.esprit.rh_rse.config.jwt.JwtAuthEntryPoint;
-import tn.esprit.rh_rse.config.jwt.JwtFilter;
 
-import java.util.Arrays;
+import java.util.List;
 
 @Configuration
-@EnableWebSecurity
-@EnableMethodSecurity  // ← ACTIVE @PreAuthorize
-@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtFilter jwtFilter;
     private final JwtAuthEntryPoint jwtAuthEntryPoint;
+    private final JwtFilter jwtFilter;
 
+    public SecurityConfig(JwtAuthEntryPoint jwtAuthEntryPoint, JwtFilter jwtFilter) {
+        this.jwtAuthEntryPoint = jwtAuthEntryPoint;
+        this.jwtFilter = jwtFilter;
+    }
+
+    // =========================
+    // 🔥 SECURITY FILTER CHAIN
+    // =========================
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        http
+                // ✅ CORS activé via bean (PAS CorsConfig)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+                .csrf(csrf -> csrf.disable())
+
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+                )
+
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(jwtAuthEntryPoint)
+                )
+
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/careers/**").permitAll()
+                        .anyRequest().authenticated()
+                )
+
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // =========================
+    // 🔥 CORS FIX FINAL
+    // =========================
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowedOriginPatterns(List.of("http://localhost:4200"));
+        configuration.setAllowedMethods(List.of("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+
+    // =========================
+    // 🔐 PASSWORD ENCODER
+    // =========================
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    // =========================
+    // 🔐 AUTH MANAGER
+    // =========================
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Origin", "Accept", "X-Requested-With"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-                .cors(Customizer.withDefaults())
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .exceptionHandling(ex ->
-                        ex.authenticationEntryPoint(jwtAuthEntryPoint))
-                .authorizeHttpRequests(auth -> auth
-                        // Public
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-
-                        // Users — Admin only
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/department/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
-
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 }
