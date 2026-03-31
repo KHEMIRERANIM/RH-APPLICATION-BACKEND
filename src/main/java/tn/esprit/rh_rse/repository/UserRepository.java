@@ -13,14 +13,12 @@ import java.util.Optional;
 public interface UserRepository extends MongoRepository<User, String> {
 
     Optional<User> findByEmail(String email);
-
     boolean existsByEmail(String email);
-
     List<User> findByRole(Role role);
-
     List<User> findByDepartement(String departement);
-
     List<User> findByStatus(UserStatus status);
-
     List<User> findByRoleAndStatus(Role role, UserStatus status);
+
+
+    List<User> findByPoste(String poste);
 }

@@ -32,13 +32,15 @@ public class JwtFilter extends OncePerRequestFilter {
             String token = authHeader.substring(7);
 
             if (jwtUtil.isTokenValid(token)) {
-                String email = jwtUtil.extractEmail(token);
-                String role = jwtUtil.extractRole(token);
+                String email  = jwtUtil.extractEmail(token);
+                String role   = jwtUtil.extractRole(token);
 
+                // ✅ On stocke le token dans credentials
+                // pour pouvoir l'utiliser en aval si besoin
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 email,
-                                null,
+                                token,   // ← credentials = token brut
                                 List.of(new SimpleGrantedAuthority("ROLE_" + role))
                         );
 

@@ -2,17 +2,21 @@ package tn.esprit.rh_rse.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tn.esprit.rh_rse.dto.response.EmployeeSimpleResponse;
 import tn.esprit.rh_rse.entity.Career;
 import tn.esprit.rh_rse.repository.CareerRepository;
+import tn.esprit.rh_rse.repository.UserRepository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class CareerService {
 
     private final CareerRepository careerRepository;
+    private final UserRepository userRepository; // ✅ Ajout
 
     public Career createCareer(Career career) {
         career.setCreatedAt(LocalDateTime.now());
@@ -51,5 +55,14 @@ public class CareerService {
         if (!careerRepository.existsById(id))
             throw new RuntimeException("Carrière introuvable : " + id);
         careerRepository.deleteById(id);
+    }
+
+    // ✅ Nouveau : employés par poste
+    public List<EmployeeSimpleResponse> getEmployeesByCareer(String careerId) {
+        Career career = getCareerById(careerId);
+        return userRepository.findByPoste(career.getTitle())
+                .stream()
+                .map(EmployeeSimpleResponse::fromUser)
+                .collect(Collectors.toList());
     }
 }

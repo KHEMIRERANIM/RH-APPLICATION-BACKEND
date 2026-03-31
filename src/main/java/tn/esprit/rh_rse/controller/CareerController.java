@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tn.esprit.rh_rse.dto.response.EmployeeSimpleResponse;
 import tn.esprit.rh_rse.entity.Career;
 import tn.esprit.rh_rse.service.CareerService;
 
@@ -44,5 +45,12 @@ public class CareerController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         careerService.deleteCareer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ✅ Nouveau endpoint
+    @GetMapping("/{id}/employees")
+    public ResponseEntity<List<EmployeeSimpleResponse>> getEmployeesByCareer(
+            @PathVariable String id) {
+        return ResponseEntity.ok(careerService.getEmployeesByCareer(id));
     }
 }
