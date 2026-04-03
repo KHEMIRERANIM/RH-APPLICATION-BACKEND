@@ -37,53 +37,48 @@ public class CommandeServiceImpl implements CommandeService {
 
     @Override
     public Commande save(Commande commande) {
-
-        // ✅ AJOUT IMPORTANT
         commande.setDateCommande(LocalDate.now());
-
-        if (commandeRepository.existsByUserIdAndMenuId(
-                commande.getUserId(), commande.getMenuId())) {
-            throw new RuntimeException("Vous avez déjà commandé ce menu !");
-        }
 
         Menu menu = menuRepository.findById(commande.getMenuId())
                 .orElseThrow(() -> new RuntimeException("Menu non trouvé : " + commande.getMenuId()));
 
-        // Sécurité null
-        if (commande.getPlats() == null) {
-            commande.setPlats(Collections.emptyList());
+        if (commande.getPlats() == null) commande.setPlats(Collections.emptyList());
+        if (menu.getPlats() == null) menu.setPlats(Collections.emptyList());
+
+        // Vérification stock avant commande
+        for (String platId : commande.getPlats()) {
+            Plat plat = menu.getPlats().stream()
+                    .filter(p -> platId.equals(p.getPlatId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Plat introuvable : " + platId));
+            if (plat.getQuantite() == null || plat.getQuantite() <= 0) {
+                throw new RuntimeException("Le plat '" + plat.getNom() + "' est en rupture de stock !");
+            }
         }
-        if (menu.getPlats() == null) {
-            menu.setPlats(Collections.emptyList());
-        }
 
-        // 🔍 DEBUG LOGS
-        log.info("=== CALCUL MONTANT ===");
-        log.info("Plats demandés dans commande : {}", commande.getPlats());
-        log.info("Plats disponibles dans le menu '{}' :", menu.getTitre());
-
-        menu.getPlats().forEach(p ->
-                log.info("  -> platId: '{}', nom: '{}', prix: {}",
-                        p.getPlatId(), p.getNom(), p.getPrix())
-        );
-
+        // ✅ Calcul montant
         double total = menu.getPlats().stream()
-                .filter(p -> p.getPlatId() != null
-                        && commande.getPlats().contains(p.getPlatId()))
-                .peek(p -> log.info("  ✔ Plat matché : {}", p.getNom()))
+                .filter(p -> p.getPlatId() != null && commande.getPlats().contains(p.getPlatId()))
                 .mapToDouble(p -> p.getPrix() != null ? p.getPrix() : 0.0)
                 .sum();
 
-        log.info("Montant total calculé : {} TND", total);
-
-        // ⚠️ Si aucun plat valide → erreur claire
         if (total == 0.0 && !commande.getPlats().isEmpty()) {
             throw new RuntimeException("Aucun plat valide sélectionné !");
         }
-
         commande.setMontantTotal(total);
 
-        return commandeRepository.save(commande);
+        Commande saved = commandeRepository.save(commande);
+
+        // Décrémentation du stock pour chaque platId commandé (gère les doublons pour quantité > 1)
+        for (String platId : commande.getPlats()) {
+            menu.getPlats().stream()
+                    .filter(p -> platId.equals(p.getPlatId()))
+                    .findFirst()
+                    .ifPresent(p -> p.setQuantite(Math.max(0, p.getQuantite() - 1)));
+        }
+        menuRepository.save(menu);
+
+        return saved;
     }
 
     @Override
