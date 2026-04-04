@@ -1,7 +1,7 @@
 package tn.esprit.rh_rse.service.impl;
 
-
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;  // ← AJOUTER
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.entity.Notification;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
@@ -16,6 +16,7 @@ import java.util.List;
 public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
+    private final SimpMessagingTemplate messagingTemplate;  // ← AJOUTER CETTE LIGNE
 
     @Override
     public List<Notification> getAll() {
@@ -32,7 +33,12 @@ public class NotificationServiceImpl implements NotificationService {
     public Notification create(Notification notification) {
         notification.setLu(false);
         notification.setDateCreation(LocalDateTime.now());
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+
+        // ✅ AJOUTER : Envoi WebSocket en temps réel
+        envoyerWebSocket(saved);
+
+        return saved;
     }
 
     @Override
@@ -84,7 +90,12 @@ public class NotificationServiceImpl implements NotificationService {
                 .lu(false)
                 .dateCreation(LocalDateTime.now())
                 .build();
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+
+        // ✅ AJOUTER : Envoi WebSocket en temps réel
+        envoyerWebSocket(saved);
+
+        return saved;
     }
 
     // ─── Demande confirmation au conducteur ────────────────
@@ -101,6 +112,23 @@ public class NotificationServiceImpl implements NotificationService {
                 .lu(false)
                 .dateCreation(LocalDateTime.now())
                 .build();
-        return notificationRepository.save(notification);
+        Notification saved = notificationRepository.save(notification);
+
+        // ✅ AJOUTER : Envoi WebSocket en temps réel
+        envoyerWebSocket(saved);
+
+        return saved;
+    }
+
+    // ✅ NOUVELLE METHODE : Envoi WebSocket
+    private void envoyerWebSocket(Notification notification) {
+        try {
+            messagingTemplate.convertAndSend(
+                    "/topic/notifications/" + notification.getDestinataireId(),
+                    notification
+            );
+        } catch (Exception e) {
+            System.err.println("WebSocket non disponible pour: " + notification.getDestinataireId());
+        }
     }
 }

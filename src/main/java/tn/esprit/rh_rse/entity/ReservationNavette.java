@@ -8,17 +8,17 @@ import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Document(collection = "reservations")
+@Document(collection = "reservations_navette")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Reservation {
+public class ReservationNavette {
 
     @Id
     private String id;
 
-    private String trajetId;
+    private String busId;
 
     private String employeId;
 
@@ -26,18 +26,20 @@ public class Reservation {
 
     private StatutReservation statut;
 
-    // Champs CO2 & points écologiques
-    private Double co2AvecCovoit;
+    private String ligne;
+
+    private String heureDepart;
+
+    private Integer dureeMinutes;
+
+    private LocalDate dateTrajet;      // ← AJOUTE CE CHAMP (manquant)
 
     private Double co2EconomiseKg;
 
     private Integer pointsEco;
 
     private LocalDate dateCalcul;
+    private String joursSelectionnes;    // "Mar,Mer" (mardi et mercredi)
 
-    private Double distanceKm; // ← ajouter ce champ
-
-    /** Si présent : cette réservation remplacera l'ancienne (même employé) après confirmation conducteur */
-    private String remplaceReservationId;
-
+    private Double distanceKm;
 }

@@ -1,5 +1,6 @@
 package tn.esprit.rh_rse.service;
 
+import tn.esprit.rh_rse.dto.request.DemandeRemplacementCovoiturageRequest;
 import tn.esprit.rh_rse.dto.request.ReservationRequest;
 import tn.esprit.rh_rse.dto.response.ReservationResponse;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
@@ -16,4 +17,7 @@ public interface ReservationService {
     List<ReservationResponse> getByTrajetId(String trajetId);
     List<ReservationResponse> getByStatut(StatutReservation statut);
     int getTotalPointsEcoByEmploye(String employeId);
+
+    /** Demande de remplacement (alternatives) : nouvelle réservation EN_ATTENTE + notification conducteur ; l'ancienne est annulée à la confirmation */
+    ReservationResponse demanderRemplacementCovoiturage(DemandeRemplacementCovoiturageRequest request);
 }

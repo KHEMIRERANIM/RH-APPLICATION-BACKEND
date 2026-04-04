@@ -2,6 +2,7 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tn.esprit.rh_rse.dto.request.DemandeRemplacementCovoiturageRequest;
 import tn.esprit.rh_rse.dto.request.ReservationRequest;
 import tn.esprit.rh_rse.dto.response.ReservationResponse;
 import tn.esprit.rh_rse.entity.EmpreinteCarbone;
@@ -46,6 +47,7 @@ public class ReservationServiceImpl implements ReservationService {
                 .co2EconomiseKg(r.getCo2EconomiseKg())
                 .pointsEco(r.getPointsEco())
                 .dateCalcul(r.getDateCalcul())
+                .remplaceReservationId(r.getRemplaceReservationId())
                 .build();
     }
 
@@ -182,6 +184,11 @@ public class ReservationServiceImpl implements ReservationService {
                                 .build()
                 );
             });
+
+            // Après confirmation : annuler la réservation covoiturage remplacée (alternatives)
+            if (existing.getRemplaceReservationId() != null && !existing.getRemplaceReservationId().isBlank()) {
+                annulerReservationPourRemplacement(existing.getRemplaceReservationId());
+            }
         }
 
         if (request.getStatut() == StatutReservation.CONFIRME) {
@@ -242,5 +249,91 @@ public class ReservationServiceImpl implements ReservationService {
                 .filter(r -> r.getStatut() != StatutReservation.ANNULE)
                 .mapToInt(r -> r.getPointsEco() != null ? r.getPointsEco() : 0)
                 .sum();
+    }
+
+    /**
+     * Annule l'ancienne réservation (passager) sans repasser par update() pour éviter les boucles.
+     */
+    private void annulerReservationPourRemplacement(String ancienneReservationId) {
+        Reservation ancienne = reservationRepository.findById(ancienneReservationId).orElse(null);
+        if (ancienne == null || ancienne.getStatut() == StatutReservation.ANNULE) {
+            return;
+        }
+        trajetRepository.findById(ancienne.getTrajetId()).ifPresent(trajet -> {
+            trajet.setPlacesRestantes(trajet.getPlacesRestantes() + 1);
+            if (trajet.getStatut() == StatutTrajet.COMPLET) {
+                trajet.setStatut(StatutTrajet.ACTIF);
+            }
+            trajetRepository.save(trajet);
+        });
+        ancienne.setStatut(StatutReservation.ANNULE);
+        reservationRepository.save(ancienne);
+        notificationService.envoyerNotification(
+                ancienne.getEmployeId(),
+                "SYSTEME",
+                ancienne.getTrajetId(),
+                TypeNotification.RESERVATION,
+                "Votre ancienne reservation a ete remplacee par la nouvelle."
+        );
+    }
+
+    @Override
+    public ReservationResponse demanderRemplacementCovoiturage(DemandeRemplacementCovoiturageRequest request) {
+        Reservation ancienne = reservationRepository.findById(request.getAncienneReservationId())
+                .orElseThrow(() -> new RuntimeException("Ancienne reservation introuvable"));
+        if (!ancienne.getEmployeId().equals(request.getEmployeId())) {
+            throw new RuntimeException("Reservation ne correspond pas a l'employe");
+        }
+        if (ancienne.getStatut() == StatutReservation.ANNULE) {
+            throw new RuntimeException("Ancienne reservation deja annulee");
+        }
+        Trajet trajet = trajetRepository.findById(request.getNouveauTrajetId())
+                .orElseThrow(() -> new RuntimeException("Trajet introuvable"));
+        if (trajet.getPlacesRestantes() <= 0) {
+            throw new RuntimeException("Plus de places disponibles");
+        }
+        trajet.setPlacesRestantes(trajet.getPlacesRestantes() - 1);
+        if (trajet.getPlacesRestantes() == 0) {
+            trajet.setStatut(StatutTrajet.COMPLET);
+        }
+        trajetRepository.save(trajet);
+
+        double distanceKm = request.getDistanceKm() != null ? request.getDistanceKm() : 25.0;
+        double co2Solo = distanceKm * 0.21;
+        double co2Covoit = distanceKm * 0.05;
+        double co2Economise = co2Solo - co2Covoit;
+        int points = (int) (co2Economise * 10);
+
+        Reservation reservation = Reservation.builder()
+                .trajetId(request.getNouveauTrajetId())
+                .employeId(request.getEmployeId())
+                .statut(StatutReservation.EN_ATTENTE)
+                .dateReservation(LocalDateTime.now())
+                .co2AvecCovoit(co2Covoit)
+                .co2EconomiseKg(co2Economise)
+                .pointsEco(points)
+                .dateCalcul(LocalDate.now())
+                .distanceKm(distanceKm)
+                .remplaceReservationId(request.getAncienneReservationId())
+                .build();
+
+        Reservation saved = reservationRepository.save(reservation);
+
+        notificationService.envoyerNotification(
+                request.getEmployeId(),
+                "SYSTEME",
+                request.getNouveauTrajetId(),
+                TypeNotification.RESERVATION,
+                "Demande de remplacement apres annulation — en attente du conducteur"
+        );
+
+        notificationService.envoyerDemandeConfirmation(
+                trajet.getEmployeId(),
+                request.getEmployeId(),
+                request.getNouveauTrajetId(),
+                saved.getId()
+        );
+
+        return toResponse(saved);
     }
 }

@@ -14,4 +14,5 @@ public interface TrajetRepository extends MongoRepository<Trajet, String> {
     List<Trajet> findByStatut(StatutTrajet statut);
     List<Trajet> findByCategorie(CategorieTransport categorie);
     List<Trajet> findByEmployeId(String employeId);
+    List<Trajet> findByStatutAndPlacesRestantesGreaterThan(StatutTrajet statut, int places);
 }
