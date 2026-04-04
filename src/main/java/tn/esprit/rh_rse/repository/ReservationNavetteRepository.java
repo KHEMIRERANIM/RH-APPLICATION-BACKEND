@@ -6,6 +6,7 @@ import tn.esprit.rh_rse.entity.ReservationNavette;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 
 @Repository
@@ -16,4 +17,12 @@ public interface ReservationNavetteRepository extends MongoRepository<Reservatio
     List<ReservationNavette> findByDateTrajet(LocalDate dateTrajet);  // ← Maintenant ça fonctionne
     long countByBusIdAndDateTrajet(String busId, LocalDate dateTrajet);
     long countByBusIdAndJoursSelectionnesContaining(String busId, String jour);
+
+    long countByBusIdAndJoursSelectionnesContainingAndStatutIn(
+            String busId, String jour, Collection<StatutReservation> statuts);
+
+    long countByBusIdInAndStatut(Collection<String> busIds, StatutReservation statut);
+    List<ReservationNavette> findByBusIdInAndStatut(List<String> busIds, StatutReservation statut);
+    List<ReservationNavette> findByBusIdAndStatut(String busId, StatutReservation statut);
+
 }

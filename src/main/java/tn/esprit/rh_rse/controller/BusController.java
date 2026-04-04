@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import tn.esprit.rh_rse.dto.request.BusPackRequest;
 import tn.esprit.rh_rse.entity.Bus;
 import tn.esprit.rh_rse.service.BusService;
 
@@ -30,6 +31,11 @@ public class BusController {
     @PostMapping
     public ResponseEntity<Bus> create(@RequestBody Bus bus) {
         return ResponseEntity.status(HttpStatus.CREATED).body(busService.create(bus));
+    }
+
+    @PostMapping("/pack")
+    public ResponseEntity<List<Bus>> createPack(@RequestBody BusPackRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(busService.createPack(request));
     }
 
     @PutMapping("/{id}")

@@ -32,4 +32,7 @@ public class Bus {
     private LocalDate dateCreation;
     private String photoUrl;  // Ajoutez cette ligne
 
+    /** Identifiant du pack (bus créés ensemble : actifs + réserve inactifs). */
+    private String packId;
+
 }

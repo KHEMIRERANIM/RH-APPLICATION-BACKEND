@@ -10,4 +10,8 @@ public interface BusRepository extends MongoRepository<Bus, String> {
     List<Bus> findByStatutAndPlacesRestantesGreaterThan(
             StatutTrajet statut, int places);
     List<Bus> findByPlacesRestantesGreaterThan(int places);
+
+    List<Bus> findByPackId(String packId);
+
+    List<Bus> findByPackIdAndStatut(String packId, StatutTrajet statut);
 }
