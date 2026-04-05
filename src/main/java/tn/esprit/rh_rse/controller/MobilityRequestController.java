@@ -1,12 +1,8 @@
 package tn.esprit.rh_rse.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.core.context.SecurityContextHolder;
-
 import org.springframework.web.multipart.MultipartFile;
 import tn.esprit.rh_rse.dto.request.MobilityRequestDTO;
 import tn.esprit.rh_rse.dto.request.MobilityReviewDTO;
@@ -26,12 +22,56 @@ public class MobilityRequestController {
 
     private final MobilityRequestService mobilityService;
 
+    // =========================
+    // CREATE REQUEST (JSON)
+    // =========================
     @PostMapping
     public ResponseEntity<MobilityRequest> submit(@RequestBody MobilityRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(mobilityService.submitRequest(dto));
     }
 
+    // =========================
+    // CREATE WITH FILE
+    // =========================
+    @PostMapping(value = "/with-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<MobilityRequest> submitWithFile(
+            @RequestParam("targetCareerId") String targetCareerId,
+            @RequestParam("motivationFile") MultipartFile motivationFile
+    ) throws IOException {
+
+        MobilityRequestDTO dto = new MobilityRequestDTO();
+
+        dto.setTargetCareerId(targetCareerId);
+        dto.setMotivationLetter(motivationFile.getOriginalFilename());
+        dto.setMotivationFileName(motivationFile.getOriginalFilename());
+
+        String base64 = Base64.getEncoder().encodeToString(motivationFile.getBytes());
+        dto.setMotivationFileBase64(base64);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(mobilityService.submitRequest(dto));
+    }
+
+    // =========================
+    // GET ALL
+    // =========================
+    @GetMapping
+    public ResponseEntity<List<MobilityRequest>> getAll() {
+        return ResponseEntity.ok(mobilityService.getAll());
+    }
+
+    // =========================
+    // GET ONE (IMPORTANT)
+    // =========================
+    @GetMapping("/{id}")
+    public ResponseEntity<MobilityRequest> getById(@PathVariable String id) {
+        return ResponseEntity.ok(mobilityService.getById(id));
+    }
+
+    // =========================
+    // REVIEW
+    // =========================
     @PatchMapping("/{id}/review")
     public ResponseEntity<MobilityRequest> review(
             @PathVariable String id,
@@ -39,44 +79,77 @@ public class MobilityRequestController {
         return ResponseEntity.ok(mobilityService.reviewRequest(id, dto));
     }
 
-    @GetMapping
-    public ResponseEntity<List<MobilityRequest>> getAll() {
-        return ResponseEntity.ok(mobilityService.getAll());
-    }
-
-    // ✅ Employé connecté — utilise le token JWT
-    @GetMapping("/me")
-    public ResponseEntity<List<MobilityRequest>> getMyRequests() {
-        return ResponseEntity.ok(mobilityService.getMyRequests());
-    }
-
-    @GetMapping("/status/{status}")
-    public ResponseEntity<List<MobilityRequest>> getByStatus(
-            @PathVariable MobilityStatus status) {
-        return ResponseEntity.ok(mobilityService.getByStatus(status));
-    }
-
+    // =========================
+    // DELETE
+    // =========================
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         mobilityService.deleteRequest(id);
         return ResponseEntity.noContent().build();
     }
-    @PostMapping(value = "/with-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<MobilityRequest> submitWithFile(
-            @RequestParam("targetCareerId") String targetCareerId,
-            @RequestParam("motivationFile") MultipartFile motivationFile) throws IOException {
 
-        // Convertir le fichier en base64 pour stockage
-        String fileBase64 = Base64.getEncoder()
-                .encodeToString(motivationFile.getBytes());
-        String fileName = motivationFile.getOriginalFilename();
+    @GetMapping("/{id}/preview")
+    public ResponseEntity<byte[]> preview(@PathVariable String id) {
 
-        MobilityRequestDTO dto = new MobilityRequestDTO();
-        dto.setTargetCareerId(targetCareerId);
-        dto.setMotivationLetter(fileName); // stocker le nom
-        dto.setMotivationFileBase64(fileBase64); // stocker le contenu
+        MobilityRequest request = mobilityService.getById(id);
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(mobilityService.submitRequest(dto));
+        if (request == null || request.getMotivationFileBase64() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String base64 = cleanBase64(request.getMotivationFileBase64());
+        byte[] fileBytes = Base64.getDecoder().decode(base64);
+
+        MediaType type = detectType(request.getMotivationFileName());
+
+        return ResponseEntity.ok()
+                .contentType(type)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + request.getMotivationFileName() + "\"")
+                .body(fileBytes);
+    }
+
+    @GetMapping("/{id}/download")
+    public ResponseEntity<byte[]> download(@PathVariable String id) {
+
+        MobilityRequest request = mobilityService.getById(id);
+
+        if (request == null || request.getMotivationFileBase64() == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String base64 = cleanBase64(request.getMotivationFileBase64());
+        byte[] fileBytes = Base64.getDecoder().decode(base64);
+
+        String fileName = request.getMotivationFileName();
+        if (fileName == null) fileName = "motivation.pdf";
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + fileName + "\"")
+                .body(fileBytes);
+    }
+    private String cleanBase64(String base64) {
+        if (base64.contains(",")) {
+            return base64.split(",")[1];
+        }
+        return base64;
+    }
+
+    private MediaType detectType(String fileName) {
+        if (fileName == null) return MediaType.APPLICATION_OCTET_STREAM;
+
+        if (fileName.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
+
+        if (fileName.endsWith(".docx")) {
+            return MediaType.parseMediaType(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            );
+        }
+
+        if (fileName.endsWith(".txt")) return MediaType.TEXT_PLAIN;
+
+        return MediaType.APPLICATION_OCTET_STREAM;
     }
 }
