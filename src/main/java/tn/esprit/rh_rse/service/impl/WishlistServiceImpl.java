@@ -45,6 +45,7 @@ public class WishlistServiceImpl implements WishlistService {
                 .idOffre(idOffre)
                 .dateAjout(LocalDateTime.now())
                 .dernierPrixConnu(prixSnapshot)
+                .dernieresPlacesDispoConnues(offre.getNbPlacesDispo() != null ? offre.getNbPlacesDispo() : 0)
                 .build();
 
         return wishlistRepository.save(wishlist);

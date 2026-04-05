@@ -26,4 +26,6 @@ public class Wishlist {
     private LocalDateTime dateAjout;
 
     private Double dernierPrixConnu;
+
+    private Integer dernieresPlacesDispoConnues;
 }
