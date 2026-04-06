@@ -70,6 +70,7 @@ public class SecurityConfig {
 
                         // Mutuelle — tous les endpoints nécessitent authentification
                         // Les règles fines sont gérées par @PreAuthorize dans les contrôleurs
+                        .requestMatchers("/api/avantages/stats/**").hasRole("ADMIN")
                         .requestMatchers("/api/partenaires/**").authenticated()
                         .requestMatchers("/api/commentaires/**").authenticated()
                         .requestMatchers("/api/avantages-reservations/**").authenticated()
