@@ -7,6 +7,8 @@ import tn.esprit.rh_rse.entity.enums.StatutTrajet;
 import tn.esprit.rh_rse.entity.enums.TypeCarburant;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
 
 @Document(collection = "bus")
 @Data
@@ -30,9 +32,15 @@ public class Bus {
     private Integer placesRestantes;
     private StatutTrajet statut;
     private LocalDate dateCreation;
-    private String photoUrl;  // Ajoutez cette ligne
+    private String photoUrl;
 
     /** Identifiant du pack (bus créés ensemble : actifs + réserve inactifs). */
     private String packId;
+
+    /** Dates spécifiques du pack pour la semaine. */
+    private List<String> packDates;
+
+    /** Occupation spécifique par jour (ex: {"2026-04-06": 15, "2026-04-07": 0}). */
+    private Map<String, Integer> dailyOccupancy;
 
 }

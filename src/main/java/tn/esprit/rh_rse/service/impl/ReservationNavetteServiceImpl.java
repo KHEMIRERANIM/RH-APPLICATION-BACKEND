@@ -73,49 +73,52 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
         Bus bus = busRepository.findById(request.getBusId())
                 .orElseThrow(() -> new RuntimeException("Bus non trouvé"));
 
-        String[] jours = request.getJoursSelectionnes().split(",");
-        int nbJours = jours.length;
+        // ✅ 1 SEULE DATE par réservation
+        String date = request.getJoursSelectionnes().trim();
+        int nbJours = 1;
 
-        // ✅ NOUVEAU : Si le bus est INACTIF, mise en file d'attente
+        // Vérification des doublons
+        List<ReservationNavette> reservationsExistantes =
+                reservationNavetteRepository.findByEmployeId(request.getEmployeId());
+
+        for (ReservationNavette existante : reservationsExistantes) {
+            if (existante.getStatut() == StatutReservation.ANNULE) continue;
+            String[] joursExistants = existante.getJoursSelectionnes().split(",");
+            for (String jourExistant : joursExistants) {
+                if (jourExistant.trim().equals(date)) {
+                    throw new RuntimeException("Vous avez déjà réservé pour le " + date);
+                }
+            }
+        }
+
+        // Vérifier places disponibles pour CETTE date
+        long placesOccupees = reservationNavetteRepository
+                .countByBusIdAndJoursSelectionnesContainingAndStatutIn(
+                        request.getBusId(), date, STATUTS_OCCUPANT_PLACE);
+        boolean isFull = placesOccupees >= bus.getCapacite();
+
+        // Si bus INACTIF dans un pack
         if (bus.getStatut() == StatutTrajet.INACTIF && bus.getPackId() != null) {
             return creerReservationEnAttente(request, bus, nbJours);
         }
 
-        boolean anyDayFull = false;
-        for (String jour : jours) {
-            if (compterPlacesOccupees(request.getBusId(), jour) >= bus.getCapacite()) {
-                anyDayFull = true;
-                break;
-            }
-        }
-
-        if (anyDayFull) {
+        if (isFull) {
             String packId = bus.getPackId();
             if (packId == null || packId.isBlank()) {
-                throw new RuntimeException(
-                        "Plus de places disponibles sur ce bus. Il n'existe pas de navette de réserve (bus hors pack).");
+                throw new RuntimeException("Plus de places disponibles pour le " + date);
             }
             List<Bus> inactifs = busRepository.findByPackIdAndStatut(packId, StatutTrajet.INACTIF);
             if (inactifs.isEmpty()) {
-                throw new RuntimeException(
-                        "Plus de places disponibles. Aucun bus inactif en réserve n'est disponible dans ce pack.");
+                throw new RuntimeException("Plus de places disponibles. Aucun bus inactif disponible.");
             }
             return creerReservationEnAttente(request, bus, nbJours);
         }
 
-        // Réservation normale (bus a des places)
-        for (int i = 0; i < nbJours; i++) {
-            bus.setPlacesRestantes(bus.getPlacesRestantes() - 1);
-        }
-
-        if (bus.getPlacesRestantes() <= 0) {
-            bus.setStatut(StatutTrajet.COMPLET);
-        }
-        busRepository.save(bus);
+        // ✅ Réservation normale - NE PAS toucher à placesRestantes du bus !
+        // (supprimer les lignes qui modifient placesRestantes)
 
         double distanceKm = (bus.getDureeMinutes() * 40.0) / 60.0;
-        double co2ParJour = distanceKm * 0.21;
-        double co2Total = co2ParJour * nbJours;
+        double co2Total = distanceKm * 0.21;
         int pointsTotal = (int) (co2Total * 10);
 
         ReservationNavette reservation = ReservationNavette.builder()
@@ -126,7 +129,7 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
                 .ligne(bus.getLigne())
                 .heureDepart(bus.getHeureDepart())
                 .dureeMinutes(bus.getDureeMinutes())
-                .joursSelectionnes(request.getJoursSelectionnes())
+                .joursSelectionnes(date)  // ← 1 seule date
                 .distanceKm(distanceKm)
                 .co2EconomiseKg(co2Total)
                 .pointsEco(pointsTotal)
