@@ -125,6 +125,10 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
         }
 
         int nuits = (int) java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
+        int minNuits = offre.getDetailsHotel().getNombreNuits() != null ? offre.getDetailsHotel().getNombreNuits() : 1;
+        if (nuits < minNuits) {
+            throw new RuntimeException("La durée minimale du séjour pour cet hôtel est de " + minNuits + " nuit(s).");
+        }
         double prix = _calculerPrixHotel(offre.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
 
         offre.setNbPlacesDispo(offre.getNbPlacesDispo() - nbTotal);
@@ -167,6 +171,10 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
         }
 
         int nuits = (int) java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
+        int minNuits = offre.getDetailsHotel().getNombreNuits() != null ? offre.getDetailsHotel().getNombreNuits() : 1;
+        if (nuits < minNuits) {
+            throw new RuntimeException("La durée minimale du séjour pour cet hôtel est de " + minNuits + " nuit(s).");
+        }
         double prix = _calculerPrixHotel(offre.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
 
         offre.setNbPlacesDispo(offre.getNbPlacesDispo() - diff);

@@ -26,10 +26,9 @@ public class WishlistAlertService {
     private final OffreRepository offreRepository;
     private final NotificationRepository notificationRepository;
 
-    // S'exécute toutes les 2 minutes pour les tests. À remettre à "0 0 8 * * *" (8h matin) pour prod.
     @Scheduled(cron = "0 */2 * * * *")
     public void detecterEvolutionsOffres() {
-        log.info("Lancement du WishlistAlertService (recherche d'évolutions tarifaires et disponibilités)");
+        log.info("lancement du WishlistAlertService (recherche d'évolutions tarifaires et disponibilités)");
 
         List<Wishlist> allWishlists = wishlistRepository.findAll();
 
@@ -41,7 +40,6 @@ public class WishlistAlertService {
 
             boolean aMettreAJour = false;
 
-            // 1. Détection de baisse de prix
             Double prixActuel = getPrixActuel(offre);
             Double dernierPrix = wishlist.getDernierPrixConnu() != null ? wishlist.getDernierPrixConnu() : prixActuel;
 
