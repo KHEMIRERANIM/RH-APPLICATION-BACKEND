@@ -81,10 +81,7 @@ public class MobilityRequestService {
 
     public List<MobilityRequest> getMyRequests() {
         User employee = getCurrentUser();
-        System.out.println("👤 getMyRequests — employeeId: " + employee.getId());
-        List<MobilityRequest> result = mobilityRepo.findByEmployeeId(employee.getId());
-        System.out.println("📦 demandes trouvées: " + result.size());
-        return result;
+        return mobilityRepo.findByEmployeeId(employee.getId());
     }
 
     public MobilityRequest getById(String id) {

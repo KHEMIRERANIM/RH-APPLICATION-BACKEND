@@ -54,8 +54,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/careers/**").permitAll()
+                        .requestMatchers("/api/mobility/**").authenticated()    // ✅
+                        .requestMatchers("/api/evolution-plans/**").authenticated() // ✅
+                        .requestMatchers("/api/career-plans/**").authenticated()    // ✅
                         .anyRequest().authenticated()
                 )
+
 
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
