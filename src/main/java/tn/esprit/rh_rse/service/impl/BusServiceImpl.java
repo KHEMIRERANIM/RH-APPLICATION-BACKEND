@@ -123,43 +123,132 @@ public class BusServiceImpl implements BusService {
         Bus saved = busRepository.save(existing);
 
         // NOTIFICATION quand un bus inactif devient actif
-        // NOTIFICATION quand un bus inactif devient actif
         if (wasInactif && becomingActif && existing.getPackId() != null) {
             List<Bus> busDuPack = busRepository.findByPackId(existing.getPackId());
-            List<ReservationNavette> enAttente = new ArrayList<>();
-
-            for (Bus bus : busDuPack) {
-                List<ReservationNavette> reservations = reservationNavetteRepository
-                        .findByBusIdAndStatut(bus.getId(), StatutReservation.EN_ATTENTE_ACTIVATION);
-                enAttente.addAll(reservations);
+            
+            // 1. Récupérer toutes les réservations EN_ATTENTE_ACTIVATION du pack, triées par date
+            List<ReservationNavette> allWaitlisted = new ArrayList<>();
+            for (Bus b : busDuPack) {
+                allWaitlisted.addAll(reservationNavetteRepository.findByBusIdAndStatut(
+                        b.getId(), StatutReservation.EN_ATTENTE_ACTIVATION));
             }
+            allWaitlisted.sort((a, b) -> a.getDateReservation().compareTo(b.getDateReservation()));
 
-            for (ReservationNavette res : enAttente) {
-                res.setStatut(StatutReservation.CONFIRME);
+            // 2. Transférer intelligemment jusqu'à saturation de la capacité
+            int capacite = existing.getCapacite();
+            int transferredCount = 0;
+
+            for (ReservationNavette res : allWaitlisted) {
+                if (transferredCount >= capacite) break;
+
+                // Transfert effectif
+                res.setBusId(existing.getId());
+                
+                // Migration de tous les jours en attente vers confirmés
+                if (res.getJoursEnAttente() != null && !res.getJoursEnAttente().isEmpty()) {
+                    if (res.getJoursConfirmes() == null) res.setJoursConfirmes(new ArrayList<>());
+                    res.getJoursConfirmes().addAll(res.getJoursEnAttente());
+                    res.setJoursEnAttente(new ArrayList<>());
+                    res.setStatut(StatutReservation.CONFIRME);
+                }
+                
                 reservationNavetteRepository.save(res);
+                transferredCount++;
 
                 notificationService.envoyerNotification(
                         res.getEmployeId(),
                         "SYSTEM",
                         existing.getPackId(),
                         TypeNotification.ACTIVATION_BUS,
-                        "Un bus de reserve a ete active ! Votre reservation est maintenant confirmee."
+                        "Bonne nouvelle ! Le bus " + existing.getMarque() + " est actif. Votre réservation est CONFIRMÉE."
                 );
             }
 
-            if (!enAttente.isEmpty()) {
+            if (transferredCount > 0) {
                 notificationService.envoyerNotification(
-                        "ADMIN",
-                        "SYSTEM",
-                        existing.getPackId(),
-                        TypeNotification.ACTIVATION_BUS,
-                        "Bus active avec succes. " + enAttente.size() + " employe(s) ont ete notifies."
+                        "ADMIN", "SYSTEM", existing.getPackId(), TypeNotification.ACTIVATION_BUS,
+                        "Activation globale : " + transferredCount + " passagers transférés sur le nouveau bus actif."
                 );
             }
         }
 
         return saved;
     }
+    @Override
+    public Bus activateForDay(String busId, String date) {
+        Bus bus = getById(busId);
+        if (bus.getPackId() == null) {
+            throw new RuntimeException("Ce bus n'appartient pas à un pack.");
+        }
+
+        // On n'active plus le bus globalement ici, on laisse son statut tel quel (ex: INACTIF)
+        Bus savedBus = bus;
+
+        // 2. Récupérer toutes les réservations en attente pour le PACK
+        List<Bus> packBuses = busRepository.findByPackId(bus.getPackId());
+        
+        // On récupère toutes les réservations EN_ATTENTE_ACTIVATION du pack
+        // et on les trie par date de création (premier arrivé, premier servi)
+        List<ReservationNavette> allWaitlisted = new ArrayList<>();
+        for (Bus b : packBuses) {
+            allWaitlisted.addAll(reservationNavetteRepository.findByBusIdAndStatut(
+                    b.getId(), StatutReservation.EN_ATTENTE_ACTIVATION));
+        }
+        
+        allWaitlisted.sort((a, b) -> a.getDateReservation().compareTo(b.getDateReservation()));
+
+        // 3. Filtrer pour le jour dédié (Comparaison de texte brute YYYY-MM-DD)
+        String targetDateStr = date.length() >= 10 ? date.substring(0, 10) : date;
+        List<ReservationNavette> waitlistedForDay = allWaitlisted.stream()
+                .filter(r -> r.getJoursEnAttente() != null && 
+                             r.getJoursEnAttente().stream().anyMatch(d -> (d.length() >= 10 ? d.substring(0, 10) : d).equals(targetDateStr)))
+                .toList();
+
+        // 4. Calculer la capacité disponible
+        int capacite = bus.getCapacite();
+        int transferredCount = 0;
+
+        for (ReservationNavette res : waitlistedForDay) {
+            if (transferredCount >= capacite) break;
+
+            // Transfert du jour spécifique (Isolation par texte brute)
+            res.getJoursEnAttente().removeIf(d -> (d.length() >= 10 ? d.substring(0, 10) : d).equals(targetDateStr));
+            
+            if (res.getJoursConfirmes() == null) res.setJoursConfirmes(new ArrayList<>());
+            if (!res.getJoursConfirmes().contains(targetDateStr)) {
+                res.getJoursConfirmes().add(targetDateStr);
+            }
+            
+            // Mise à jour de l'ID du bus
+            res.setBusId(bus.getId());
+
+            // Si plus aucun jour n'est en attente, le statut global devient CONFIRME
+            if (res.getJoursEnAttente().isEmpty()) {
+                res.setStatut(StatutReservation.CONFIRME);
+            }
+
+            reservationNavetteRepository.save(res);
+            transferredCount++;
+
+            // Notification
+            notificationService.envoyerNotification(
+                    res.getEmployeId(),
+                    "SYSTEM",
+                    bus.getPackId(),
+                    TypeNotification.ACTIVATION_BUS,
+                    "Votre réservation pour le " + date + " est CONFIRMÉE sur le nouveau bus " + bus.getMarque() + "."
+            );
+        }
+
+        // Notification Admin
+        notificationService.envoyerNotification(
+                "ADMIN", "SYSTEM", bus.getPackId(), TypeNotification.ACTIVATION_BUS,
+                "Bus activé pour le " + date + ". " + transferredCount + " passagers transférés."
+        );
+
+        return savedBus;
+    }
+
     @Override
     public void delete(String id) {
         busRepository.deleteById(id);

@@ -48,6 +48,8 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
                 .heureDepart(r.getHeureDepart())
                 .dureeMinutes(r.getDureeMinutes())
                 .joursSelectionnes(r.getJoursSelectionnes())
+                .joursConfirmes(r.getJoursConfirmes())
+                .joursEnAttente(r.getJoursEnAttente())
                 .pointsEco(r.getPointsEco())
                 .co2EconomiseKg(r.getCo2EconomiseKg())
                 .distanceKm(r.getDistanceKm())
@@ -73,96 +75,58 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
         Bus bus = busRepository.findById(request.getBusId())
                 .orElseThrow(() -> new RuntimeException("Bus non trouvé"));
 
-        // ✅ 1 SEULE DATE par réservation
-        String date = request.getJoursSelectionnes().trim();
-        int nbJours = 1;
+        String packId = bus.getPackId();
+        String[] jours = request.getJoursSelectionnes().split(",");
+        List<String> joursConfirmes = new java.util.ArrayList<>();
+        List<String> joursEnAttente = new java.util.ArrayList<>();
 
         // Vérification des doublons
         List<ReservationNavette> reservationsExistantes =
                 reservationNavetteRepository.findByEmployeId(request.getEmployeId());
 
-        for (ReservationNavette existante : reservationsExistantes) {
-            if (existante.getStatut() == StatutReservation.ANNULE) continue;
-            String[] joursExistants = existante.getJoursSelectionnes().split(",");
-            for (String jourExistant : joursExistants) {
-                if (jourExistant.trim().equals(date)) {
-                    throw new RuntimeException("Vous avez déjà réservé pour le " + date);
+        for (String jour : jours) {
+            String j = jour.trim();
+            for (ReservationNavette existante : reservationsExistantes) {
+                if (existante.getStatut() == StatutReservation.ANNULE) continue;
+                if (existante.getJoursSelectionnes().contains(j)) {
+                    throw new RuntimeException("Vous avez déjà réservé pour le " + j);
                 }
             }
-        }
 
-        // Vérifier places disponibles pour CETTE date
-        long placesOccupees = reservationNavetteRepository
-                .countByBusIdAndJoursSelectionnesContainingAndStatutIn(
-                        request.getBusId(), date, STATUTS_OCCUPANT_PLACE);
-        boolean isFull = placesOccupees >= bus.getCapacite();
-
-        // Si bus INACTIF dans un pack
-        if (bus.getStatut() == StatutTrajet.INACTIF && bus.getPackId() != null) {
-            return creerReservationEnAttente(request, bus, nbJours);
-        }
-
-        if (isFull) {
-            String packId = bus.getPackId();
-            if (packId == null || packId.isBlank()) {
-                throw new RuntimeException("Plus de places disponibles pour le " + date);
+            // Calcul de la capacité au niveau du pack pour ce jour
+            long placesOccupees = reservationNavetteRepository
+                    .countByBusIdAndJoursSelectionnesContainingAndStatutIn(
+                            request.getBusId(), j, STATUTS_OCCUPANT_PLACE);
+            
+            // Si on est dans un pack, on considère la capacité totale active
+            boolean isFull = placesOccupees >= bus.getCapacite();
+            
+            if (isFull && packId != null) {
+                joursEnAttente.add(j);
+            } else if (isFull && packId == null) {
+                throw new RuntimeException("Plus de places disponibles pour le " + j);
+            } else {
+                joursConfirmes.add(j);
             }
-            List<Bus> inactifs = busRepository.findByPackIdAndStatut(packId, StatutTrajet.INACTIF);
-            if (inactifs.isEmpty()) {
-                throw new RuntimeException("Plus de places disponibles. Aucun bus inactif disponible.");
-            }
-            return creerReservationEnAttente(request, bus, nbJours);
         }
-
-        // ✅ Réservation normale - NE PAS toucher à placesRestantes du bus !
-        // (supprimer les lignes qui modifient placesRestantes)
 
         double distanceKm = (bus.getDureeMinutes() * 40.0) / 60.0;
-        double co2Total = distanceKm * 0.21;
+        double co2Total = distanceKm * 0.21 * jours.length;
         int pointsTotal = (int) (co2Total * 10);
+
+        StatutReservation statutGlobal = joursEnAttente.isEmpty() ? StatutReservation.CONFIRME : StatutReservation.EN_ATTENTE_ACTIVATION;
 
         ReservationNavette reservation = ReservationNavette.builder()
                 .busId(request.getBusId())
                 .employeId(request.getEmployeId())
-                .statut(StatutReservation.CONFIRME)
-                .dateReservation(LocalDateTime.now())
-                .ligne(bus.getLigne())
-                .heureDepart(bus.getHeureDepart())
-                .dureeMinutes(bus.getDureeMinutes())
-                .joursSelectionnes(date)  // ← 1 seule date
-                .distanceKm(distanceKm)
-                .co2EconomiseKg(co2Total)
-                .pointsEco(pointsTotal)
-                .dateCalcul(LocalDate.now())
-                .build();
-
-        return toResponse(reservationNavetteRepository.save(reservation));
-    }
-
-        // ✅ Méthode utilitaire pour les réservations en attente
-    private ReservationNavetteResponse creerReservationEnAttente(ReservationNavetteRequest request, Bus bus, int nbJours) {
-        String packId = bus.getPackId();
-
-        // Compter les réservations en attente avant
-        List<Bus> busDuPack = busRepository.findByPackId(packId);
-        List<String> idsPack = busDuPack.stream().map(Bus::getId).toList();
-        long avantListeAttente = reservationNavetteRepository.countByBusIdInAndStatut(
-                idsPack, StatutReservation.EN_ATTENTE_ACTIVATION);
-
-        double distanceKm = (bus.getDureeMinutes() * 40.0) / 60.0;
-        double co2ParJour = distanceKm * 0.21;
-        double co2Total = co2ParJour * nbJours;
-        int pointsTotal = (int) (co2Total * 10);
-
-        ReservationNavette reservation = ReservationNavette.builder()
-                .busId(request.getBusId())
-                .employeId(request.getEmployeId())
-                .statut(StatutReservation.EN_ATTENTE_ACTIVATION)
+                .statut(statutGlobal)
                 .dateReservation(LocalDateTime.now())
                 .ligne(bus.getLigne())
                 .heureDepart(bus.getHeureDepart())
                 .dureeMinutes(bus.getDureeMinutes())
                 .joursSelectionnes(request.getJoursSelectionnes())
+                .joursConfirmes(joursConfirmes)
+                .joursEnAttente(joursEnAttente)
                 .distanceKm(distanceKm)
                 .co2EconomiseKg(co2Total)
                 .pointsEco(pointsTotal)
@@ -171,43 +135,56 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
 
         reservationNavetteRepository.save(reservation);
 
-        long apresListeAttente = avantListeAttente + 1;
-
-        // Trouver le bus inactif pour connaître sa capacité
-        Bus busInactif = busRepository.findByPackIdAndStatut(packId, StatutTrajet.INACTIF)
-                .stream().findFirst().orElse(null);
-
-        int capaciteReserve = (busInactif != null && busInactif.getCapacite() != null)
-                ? busInactif.getCapacite() : 0;
-        int seuil = Math.max(1, capaciteReserve / 2);
-
-        // ✅ CAS 1 : Première personne en liste d'attente (début)
-        if (avantListeAttente == 0 && apresListeAttente == 1) {
-            notificationService.envoyerNotification(
-                    "ADMIN",
-                    "SYSTEM",
-                    packId,
-                    TypeNotification.ACTIVATION_BUS,
-                    String.format(
-                            "⚠️ Début de liste d'attente : 1 employé attend. Seuil d'activation à %d employés (moitié des %d places).",
-                            seuil, capaciteReserve)
-            );
-        }
-
-        // ✅ CAS 2 : Seuil atteint
-        if (apresListeAttente >= seuil && avantListeAttente < seuil) {
-            notificationService.envoyerNotification(
-                    "ADMIN",
-                    "SYSTEM",
-                    packId,
-                    TypeNotification.ACTIVATION_BUS,
-                    String.format(
-                            "🚨 ATTENTION ADMIN : %d employé(s) en attente ! Le seuil de %d (moitié des %d places) est atteint. Veuillez activer un bus de réserve immédiatement.",
-                            apresListeAttente, seuil, capaciteReserve)
-            );
+        // Notifications Admin si au moins un jour est en attente
+        if (!joursEnAttente.isEmpty() && packId != null) {
+            envoyerNotificationsAdminSiBesoin(packId);
         }
 
         return toResponse(reservation);
+    }
+
+    private void envoyerNotificationsAdminSiBesoin(String packId) {
+        List<Bus> busDuPack = busRepository.findByPackId(packId);
+        List<String> idsPack = busDuPack.stream().map(Bus::getId).toList();
+        
+        Bus busInactif = busDuPack.stream()
+                .filter(b -> b.getStatut() == StatutTrajet.INACTIF)
+                .findFirst().orElse(null);
+        
+        int capaciteReserve = (busInactif != null && busInactif.getCapacite() != null) ? busInactif.getCapacite() : 15;
+        int seuil = Math.max(1, capaciteReserve / 2);
+
+        // 1. Récupérer toutes les réservations EN_ATTENTE_ACTIVATION du pack
+        List<ReservationNavette> allWaiting = reservationNavetteRepository.findByBusIdInAndStatut(
+                idsPack, StatutReservation.EN_ATTENTE_ACTIVATION);
+
+        // 2. Extraire tous les jours uniques présents dans ces réservations
+        java.util.Set<String> joursEnAttente = allWaiting.stream()
+                .flatMap(r -> r.getJoursEnAttente().stream())
+                .collect(Collectors.toSet());
+
+        // 3. Pour chaque jour, compter les passagers et alerter si seuil atteint
+        for (String jour : joursEnAttente) {
+            long countPourCeJour = allWaiting.stream()
+                    .filter(r -> r.getJoursEnAttente().contains(jour))
+                    .count();
+
+            if (countPourCeJour >= seuil) {
+                notificationService.envoyerNotification(
+                        "ADMIN", "SYSTEM", packId, TypeNotification.ACTIVATION_BUS,
+                        String.format("🚨 SEUIL PAR JOUR ATTEINT : Le jour [%s] a %d passagers en attente sur le pack %s. Seuil de %d atteint (Moitié des %d places).", jour, countPourCeJour, packId, seuil, capaciteReserve)
+                );
+            }
+        }
+
+        // Notification globale (optionnelle si un passager arrive)
+        long totalEnAttente = allWaiting.size();
+        if (totalEnAttente == 1) {
+            notificationService.envoyerNotification(
+                    "ADMIN", "SYSTEM", packId, TypeNotification.ACTIVATION_BUS,
+                    String.format("⚠️ Début de liste d'attente : Premier employé en attente sur le pack %s.", packId)
+            );
+        }
     }
 
     @Override

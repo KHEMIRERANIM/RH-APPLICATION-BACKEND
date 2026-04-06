@@ -7,6 +7,7 @@ import tn.esprit.rh_rse.entity.enums.StatutReservation;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Document(collection = "reservations_navette")
 @Data
@@ -32,7 +33,7 @@ public class ReservationNavette {
 
     private Integer dureeMinutes;
 
-    private LocalDate dateTrajet;      // ← AJOUTE CE CHAMP (manquant)
+    private LocalDate dateTrajet;
 
     private Double co2EconomiseKg;
 
@@ -42,4 +43,7 @@ public class ReservationNavette {
     private String joursSelectionnes;    // "Mar,Mer" (mardi et mercredi)
 
     private Double distanceKm;
+
+    private List<String> joursEnAttente;
+    private List<String> joursConfirmes;
 }

@@ -48,4 +48,11 @@ public class BusController {
         busService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PostMapping("/{busId}/activate-for-day")
+    public ResponseEntity<Bus> activateForDay(
+            @PathVariable String busId,
+            @RequestParam String date) {
+        return ResponseEntity.ok(busService.activateForDay(busId, date));
+    }
 }

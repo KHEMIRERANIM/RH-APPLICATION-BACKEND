@@ -13,4 +13,5 @@ public interface BusService {
     List<Bus> createPack(BusPackRequest request);
     Bus update(String id, Bus bus);
     void delete(String id);
+    Bus activateForDay(String busId, String date);
 }
