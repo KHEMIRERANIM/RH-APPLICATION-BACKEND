@@ -97,17 +97,28 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
             long placesOccupees = reservationNavetteRepository
                     .countByBusIdAndJoursSelectionnesContainingAndStatutIn(
                             request.getBusId(), j, STATUTS_OCCUPANT_PLACE);
-            
-            // Si on est dans un pack, on considère la capacité totale active
+
+            boolean busInactif = bus.getStatut() == StatutTrajet.INACTIF;
             boolean isFull = placesOccupees >= bus.getCapacite();
-            
-            if (isFull && packId != null) {
+
+            if (busInactif && packId != null) {
+                joursEnAttente.add(j);
+            } else if (isFull && packId != null) {
+                Bus busInactifDuPack = busRepository.findByPackId(packId).stream()
+                        .filter(b -> b.getStatut() == StatutTrajet.INACTIF)
+                        .findFirst().orElse(null);
+                if (busInactifDuPack != null) {
+                    request.setBusId(busInactifDuPack.getId());
+                    bus = busInactifDuPack;
+                    packId = busInactifDuPack.getPackId();
+                }
                 joursEnAttente.add(j);
             } else if (isFull && packId == null) {
                 throw new RuntimeException("Plus de places disponibles pour le " + j);
             } else {
                 joursConfirmes.add(j);
             }
+// Un jour ne peut jamais être dans les deux listes
         }
 
         double distanceKm = (bus.getDureeMinutes() * 40.0) / 60.0;

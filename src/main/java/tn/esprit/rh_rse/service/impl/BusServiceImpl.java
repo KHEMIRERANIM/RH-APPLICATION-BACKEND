@@ -138,29 +138,45 @@ public class BusServiceImpl implements BusService {
             int capacite = existing.getCapacite();
             int transferredCount = 0;
 
-            for (ReservationNavette res : allWaitlisted) {
-                if (transferredCount >= capacite) break;
+            // NOUVEAU CODE
+// Compter les places déjà prises par jour sur ce bus
+            java.util.Map<String, Integer> placesParJour = new java.util.HashMap<>();
 
-                // Transfert effectif
-                res.setBusId(existing.getId());
-                
-                // Migration de tous les jours en attente vers confirmés
-                if (res.getJoursEnAttente() != null && !res.getJoursEnAttente().isEmpty()) {
-                    if (res.getJoursConfirmes() == null) res.setJoursConfirmes(new ArrayList<>());
-                    res.getJoursConfirmes().addAll(res.getJoursEnAttente());
-                    res.setJoursEnAttente(new ArrayList<>());
-                    res.setStatut(StatutReservation.CONFIRME);
+
+            for (ReservationNavette res : allWaitlisted) {
+                List<String> joursAConfirmer = new ArrayList<>();
+                List<String> joursARester = new ArrayList<>();
+
+                for (String jour : res.getJoursEnAttente()) {
+                    int prises = placesParJour.getOrDefault(jour, 0);
+                    if (prises < capacite) {
+                        joursAConfirmer.add(jour);
+                        placesParJour.put(jour, prises + 1);
+                    } else {
+                        joursARester.add(jour);
+                    }
                 }
-                
+
+                if (joursAConfirmer.isEmpty()) continue;
+
+                res.setBusId(existing.getId());
+                if (res.getJoursConfirmes() == null) res.setJoursConfirmes(new ArrayList<>());
+                res.getJoursConfirmes().addAll(joursAConfirmer);
+                res.setJoursEnAttente(joursARester); // retiré de joursEnAttente
+
+                res.setStatut(joursARester.isEmpty()
+                        ? StatutReservation.CONFIRME
+                        : StatutReservation.EN_ATTENTE_ACTIVATION);
+
                 reservationNavetteRepository.save(res);
                 transferredCount++;
 
                 notificationService.envoyerNotification(
-                        res.getEmployeId(),
-                        "SYSTEM",
-                        existing.getPackId(),
+                        res.getEmployeId(), "SYSTEM", existing.getPackId(),
                         TypeNotification.ACTIVATION_BUS,
-                        "Bonne nouvelle ! Le bus " + existing.getMarque() + " est actif. Votre réservation est CONFIRMÉE."
+                        "Bonne nouvelle ! Le bus " + existing.getMarque() + " est actif. " +
+                                "Jours confirmés : " + joursAConfirmer +
+                                (joursARester.isEmpty() ? "" : " | Encore en attente : " + joursARester)
                 );
             }
 
