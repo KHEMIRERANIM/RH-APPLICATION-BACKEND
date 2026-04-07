@@ -17,5 +17,6 @@ public interface CandidatureService {
     CandidatureResponse ajouterNotesRecruteur(String id, String notes);
     Map<StatutCandidature, List<CandidatureResponse>> getKanban(String offreId);
     List<CandidatureResponse> getTopCandidatsByScore(String offreId);
+    CandidatureResponse soumettreTestLangue(String candidatureId, Double scoreLangue);
     void deleteCandidature(String id);
 }

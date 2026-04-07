@@ -67,6 +67,13 @@ public class CandidatureController {
         return ResponseEntity.ok(candidatureService.getKanban(offreId));
     }
 
+    @PostMapping("/{id}/test-langue")
+    public ResponseEntity<CandidatureResponse> soumettreTestLangue(
+            @PathVariable String id,
+            @RequestParam Double scoreLangue) {
+        return ResponseEntity.ok(candidatureService.soumettreTestLangue(id, scoreLangue));
+    }
+
     @GetMapping("/top/{offreId}")
     public ResponseEntity<List<CandidatureResponse>> getTopCandidats(@PathVariable String offreId) {
         return ResponseEntity.ok(candidatureService.getTopCandidatsByScore(offreId));

@@ -154,6 +154,9 @@ public class CandidatureServiceImpl implements CandidatureService {
                 .competencesExtraites(competencesExtraites)
                 .competencesManquantes(competencesManquantes)
                 .anneesExperienceDetecte(rand.nextInt(6) + 1)
+                .testLanguePasse(false)
+                .scoreLangue(0.0)
+                .formationRequise(false)
                 .etapeActuelle("CV Reçu")
 
                 .historiqueStatuts(
@@ -411,6 +414,34 @@ public class CandidatureServiceImpl implements CandidatureService {
     }
 
     @Override
+    public CandidatureResponse soumettreTestLangue(String candidatureId, Double scoreLangue) {
+        Candidature c = candidatureRepository.findById(candidatureId)
+                .orElseThrow(() -> new RecrutementNotFoundException("Candidature introuvable : " + candidatureId));
+                
+        // L'IA Python a déjà calculé le score et l'Angular l'a transmis ici!
+        double score = Math.round(scoreLangue * 10.0) / 10.0;
+        
+        c.setTestLanguePasse(true);
+        c.setScoreLangue(score);
+        
+        if (score < 55.0) {
+            c.setFormationRequise(true);
+            log.info("Test Langue - Candidat {} : Score faible ({}%), formation e-learning assignée.", candidatureId, score);
+        } else {
+            c.setFormationRequise(false);
+            log.info("Test Langue - Candidat {} : Score excellent ({}%), pas de formation.", candidatureId, score);
+        }
+        
+        if (c.getHistoriqueStatuts() == null) {
+            c.setHistoriqueStatuts(new ArrayList<>());
+        }
+        c.getHistoriqueStatuts().add("TEST_VIDÉO_IA - " + LocalDateTime.now() + " | Anglais: " + score + "%");
+        c.setDateDerniereMAJ(LocalDateTime.now());
+        
+        return toResponse(candidatureRepository.save(c));
+    }
+
+    @Override
     public void deleteCandidature(String id) {
 
         Candidature c =
@@ -511,6 +542,9 @@ public class CandidatureServiceImpl implements CandidatureService {
                 .competencesExtraites(c.getCompetencesExtraites())
                 .competencesManquantes(c.getCompetencesManquantes())
                 .anneesExperienceDetecte(c.getAnneesExperienceDetecte())
+                .testLanguePasse(c.getTestLanguePasse())
+                .scoreLangue(c.getScoreLangue())
+                .formationRequise(c.getFormationRequise())
 
                 .datePostulation(c.getDatePostulation())
 

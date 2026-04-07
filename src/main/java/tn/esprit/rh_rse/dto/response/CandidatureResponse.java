@@ -23,6 +23,9 @@ public class CandidatureResponse {
     private List<String> competencesExtraites;
     private List<String> competencesManquantes;
     private Integer anneesExperienceDetecte;
+    private Boolean testLanguePasse;
+    private Double scoreLangue;
+    private Boolean formationRequise;
     private LocalDateTime datePostulation;
     private LocalDateTime dateDerniereMAJ;
 }
