@@ -21,6 +21,7 @@ public class CandidatureResponse {
     private String notesRecruteur;
     private List<String> historiqueStatuts;
     private List<String> competencesExtraites;
+    private List<String> competencesManquantes;
     private Integer anneesExperienceDetecte;
     private LocalDateTime datePostulation;
     private LocalDateTime dateDerniereMAJ;

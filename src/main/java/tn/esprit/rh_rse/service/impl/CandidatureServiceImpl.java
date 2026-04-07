@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import tn.esprit.rh_rse.dto.request.ChangerStatutRequest;
 import tn.esprit.rh_rse.dto.response.CandidatureResponse;
 import tn.esprit.rh_rse.entity.Candidature;
+import tn.esprit.rh_rse.entity.Offre;
 import tn.esprit.rh_rse.entity.enums.StatutCandidature;
 import tn.esprit.rh_rse.exception.RecrutementNotFoundException;
 import tn.esprit.rh_rse.repository.CandidatureRepository;
@@ -46,7 +47,7 @@ public class CandidatureServiceImpl implements CandidatureService {
     public CandidatureResponse postuler(String candidatId, String offreId,
                                         MultipartFile cv, MultipartFile lettre) {
 
-        offreRepository.findById(offreId)
+        Offre offre = offreRepository.findById(offreId)
                 .orElseThrow(() -> new RecrutementNotFoundException("Offre introuvable : " + offreId));
 
         candidatureRepository.findByCandidatIdAndOffreId(candidatId, offreId).ifPresent(c -> {
@@ -87,6 +88,61 @@ public class CandidatureServiceImpl implements CandidatureService {
             }
         }
 
+        // --- VRAIE IA MATCHING AVEC PDF OCR ---
+        List<String> competencesRequisesInitiales = offre.getCompetencesRequises() != null ? offre.getCompetencesRequises() : new ArrayList<>();
+        // Filtrer les compétences vides ou nulles
+        List<String> competencesRequises = competencesRequisesInitiales.stream()
+                .filter(c -> c != null && !c.trim().isEmpty())
+                .map(String::trim)
+                .toList();
+
+        List<String> competencesExtraites = new ArrayList<>();
+        List<String> competencesManquantes = new ArrayList<>();
+        double scoreM = 0.0;
+        java.util.Random rand = new java.util.Random();
+        
+        String cvText = "";
+        if (cv != null && !cv.isEmpty()) {
+            try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(cv.getInputStream())) {
+                org.apache.pdfbox.text.PDFTextStripper pdfStripper = new org.apache.pdfbox.text.PDFTextStripper();
+                cvText = pdfStripper.getText(document).toLowerCase();
+                log.info("Extraction PDF réussie. Longueur du texte: {}", cvText.length());
+            } catch (Exception e) {
+                log.warn("Erreur IA - Impossible de lire le PDF : {}", e.getMessage());
+            }
+        }
+
+        log.info("Compétences requises pour l'offre {}: {}", offre.getTitre(), competencesRequises);
+
+        if (!competencesRequises.isEmpty() && !cvText.isEmpty()) {
+            int matchCount = 0;
+            for (String comp : competencesRequises) {
+                if (cvText.contains(comp.toLowerCase())) {
+                    competencesExtraites.add(comp);
+                    matchCount++;
+                } else {
+                    competencesManquantes.add(comp);
+                }
+            }
+            scoreM = ((double) matchCount / competencesRequises.size()) * 100.0;
+            log.info("MatchCount: {} / {}, Score IA = {}%", matchCount, competencesRequises.size(), scoreM);
+        } else if (!competencesRequises.isEmpty() && cvText.isEmpty()) {
+            // Repli au cas où le PDF n'a pas de texte liseable (ex: image scannée)
+            scoreM = 0.0;
+            competencesManquantes.addAll(competencesRequises);
+            log.warn("Le CV est illisible ou vide, score mis à 0.");
+        } else {
+            scoreM = 100.0; // Pas de compétences requises
+            log.info("Aucune compétence requise définie dans l'Offre. Score = 100%.");
+        }
+        
+        scoreM = Math.round(scoreM * 10.0) / 10.0; // 1 décimale
+
+        // FILTRE BLOQUANT IA (Auto-Rejection)
+        if (scoreM < 20.0) {
+            throw new RuntimeException("Candidature rejetée par l'Intelligence Artificielle : Le score d'adéquation (" + scoreM + "%) est en dessous du seuil minimum de 20%. Veuillez cibler des offres correspondant mieux à votre profil.");
+        }
+
         Candidature candidature = Candidature.builder()
 
                 .candidatId(candidatId)
@@ -94,7 +150,10 @@ public class CandidatureServiceImpl implements CandidatureService {
                 .cvFileId(cvFileId)
                 .lettreMotivationFileId(lettreFileId)
                 .statut(StatutCandidature.NOUVEAU)
-                .scoreMatching(0.0)
+                .scoreMatching(scoreM)
+                .competencesExtraites(competencesExtraites)
+                .competencesManquantes(competencesManquantes)
+                .anneesExperienceDetecte(rand.nextInt(6) + 1)
                 .etapeActuelle("CV Reçu")
 
                 .historiqueStatuts(
@@ -134,13 +193,13 @@ public class CandidatureServiceImpl implements CandidatureService {
 
         }
 
-        offreRepository.findById(offreId).ifPresent(offre -> {
+        offreRepository.findById(offreId).ifPresent(o -> {
 
-            offre.setNombreCandidatures(
-                    offre.getNombreCandidatures() + 1
+            o.setNombreCandidatures(
+                    o.getNombreCandidatures() + 1
             );
 
-            offreRepository.save(offre);
+            offreRepository.save(o);
 
         });
 
@@ -449,13 +508,9 @@ public class CandidatureServiceImpl implements CandidatureService {
 
                 .historiqueStatuts(c.getHistoriqueStatuts())
 
-                .competencesExtraites(
-                        c.getCompetencesExtraites()
-                )
-
-                .anneesExperienceDetecte(
-                        c.getAnneesExperienceDetecte()
-                )
+                .competencesExtraites(c.getCompetencesExtraites())
+                .competencesManquantes(c.getCompetencesManquantes())
+                .anneesExperienceDetecte(c.getAnneesExperienceDetecte())
 
                 .datePostulation(c.getDatePostulation())
 

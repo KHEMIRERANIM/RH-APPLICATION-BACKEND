@@ -33,6 +33,7 @@ public class Candidature {
     private List<String> historiqueStatuts;
 
     private List<String> competencesExtraites;
+    private List<String> competencesManquantes;
     private Integer anneesExperienceDetecte;
 
     private LocalDateTime datePostulation;
