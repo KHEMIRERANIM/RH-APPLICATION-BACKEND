@@ -40,6 +40,13 @@ public class Candidature {
     private Boolean testLanguePasse;
     private Double scoreLangue;
     private Boolean formationRequise;
+    
+    // Soft Skills / RSE
+    private Integer scoreLeadership;
+    private Integer scoreEmpathie;
+    private Integer scoreAdaptabilite;
+    private Integer scoreCommunication;
+    private Integer scoreInnovation;
 
     private LocalDateTime datePostulation;
     private LocalDateTime dateDerniereMAJ;

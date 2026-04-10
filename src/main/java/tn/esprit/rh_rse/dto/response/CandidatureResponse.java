@@ -26,6 +26,11 @@ public class CandidatureResponse {
     private Boolean testLanguePasse;
     private Double scoreLangue;
     private Boolean formationRequise;
+    private Integer scoreLeadership;
+    private Integer scoreEmpathie;
+    private Integer scoreAdaptabilite;
+    private Integer scoreCommunication;
+    private Integer scoreInnovation;
     private LocalDateTime datePostulation;
     private LocalDateTime dateDerniereMAJ;
 }
