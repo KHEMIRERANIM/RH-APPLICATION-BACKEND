@@ -19,13 +19,21 @@ public class TrajetServiceImpl implements TrajetService {
 
     @Override
     public List<Trajet> getAll() {
-        return trajetRepository.findAll();
+        List<Trajet> trajets = trajetRepository.findAll();
+        trajets.forEach(t -> {
+            if (t.getPrix() == null) t.setPrix(5.0);
+        });
+        return trajets;
     }
 
     @Override
     public Trajet getById(String id) {
-        return trajetRepository.findById(id)
+        Trajet trajet = trajetRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Trajet non trouvé : " + id));
+        if (trajet.getPrix() == null) {
+            trajet.setPrix(5.0);
+        }
+        return trajet;
     }
 
     @Override
@@ -47,6 +55,7 @@ public class TrajetServiceImpl implements TrajetService {
         existing.setCategorie(trajet.getCategorie());
         existing.setStatut(trajet.getStatut());
         existing.setVehiculeId(trajet.getVehiculeId());
+        existing.setPrix(trajet.getPrix());
         return trajetRepository.save(existing);
     }
 
@@ -57,6 +66,10 @@ public class TrajetServiceImpl implements TrajetService {
 
     @Override
     public List<Trajet> getByStatut(StatutTrajet statut) {
-        return trajetRepository.findByStatut(statut);
+        List<Trajet> trajets = trajetRepository.findByStatut(statut);
+        trajets.forEach(t -> {
+            if (t.getPrix() == null) t.setPrix(5.0);
+        });
+        return trajets;
     }
 }

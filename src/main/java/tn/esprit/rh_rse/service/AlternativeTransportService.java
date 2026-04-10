@@ -69,6 +69,7 @@ public class AlternativeTransportService {
             dto.setAdresseArrivee(t.getAdresseArrivee());
             dto.setHeureDepart(t.getHeureDepart().toString());
             dto.setPlacesRestantes(t.getPlacesRestantes());
+            dto.setPrix(t.getPrix());
             dto.setType("COVOITURAGE");
             dto.setPriorite(1);
             alternatives.add(dto);

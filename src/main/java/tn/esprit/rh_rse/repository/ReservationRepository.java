@@ -36,4 +36,6 @@ public interface ReservationRepository extends MongoRepository<Reservation, Stri
 
     // Compter par statut
     long countByStatut(StatutReservation statut);
+
+
 }

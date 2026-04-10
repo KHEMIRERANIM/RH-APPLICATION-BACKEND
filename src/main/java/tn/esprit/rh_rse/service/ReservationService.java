@@ -20,4 +20,4 @@ public interface ReservationService {
 
     /** Demande de remplacement (alternatives) : nouvelle réservation EN_ATTENTE + notification conducteur ; l'ancienne est annulée à la confirmation */
     ReservationResponse demanderRemplacementCovoiturage(DemandeRemplacementCovoiturageRequest request);
-}
+    void confirmerReservationApresPaiement(String reservationId);}

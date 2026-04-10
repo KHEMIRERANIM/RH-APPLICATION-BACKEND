@@ -4,6 +4,7 @@ public enum StatutReservation {
     EN_ATTENTE,
     /** Liste d'attente : bus actif plein, en attente d'activation d'un bus du pack. */
     EN_ATTENTE_ACTIVATION,
+    EN_ATTENTE_PAIEMENT,
     CONFIRME,
     ANNULE
 }

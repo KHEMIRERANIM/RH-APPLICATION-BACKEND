@@ -1,5 +1,7 @@
 package tn.esprit.rh_rse.service.impl;
-
+import org.springframework.transaction.annotation.Transactional;
+import tn.esprit.rh_rse.entity.Reservation;
+import tn.esprit.rh_rse.repository.ReservationRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -46,4 +48,5 @@ public class VehiculeServiceImpl implements VehiculeService {
     public void delete(String id) {
         vehiculeRepository.deleteById(id);
     }
+
 }

@@ -17,6 +17,7 @@ public class Reservation {
 
     @Id
     private String id;
+    private LocalDateTime dateAcceptation;  // ← AJOUTE CETTE LIGNE
 
     private String trajetId;
 

@@ -39,6 +39,8 @@ public class Trajet {
     private Integer placesRestantes;
 
     private StatutTrajet statut;
+    
+    private Double prix;
 
     private LocalDate dateCreation;
 }

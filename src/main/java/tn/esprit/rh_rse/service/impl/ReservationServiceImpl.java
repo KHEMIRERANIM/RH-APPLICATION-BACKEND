@@ -2,6 +2,7 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.rh_rse.dto.request.DemandeRemplacementCovoiturageRequest;
 import tn.esprit.rh_rse.dto.request.ReservationRequest;
 import tn.esprit.rh_rse.dto.response.ReservationResponse;
@@ -138,6 +139,12 @@ public class ReservationServiceImpl implements ReservationService {
                 }
                 trajetRepository.save(trajet);
             });
+        }
+
+        // Acceptation : début du délai de paiement (15 min)
+        if (request.getStatut() == StatutReservation.EN_ATTENTE_PAIEMENT
+                && existing.getStatut() != StatutReservation.EN_ATTENTE_PAIEMENT) {
+            existing.setDateAcceptation(LocalDateTime.now());
         }
 
         // Confirmation : creer les empreintes carbone
@@ -336,4 +343,13 @@ public class ReservationServiceImpl implements ReservationService {
 
         return toResponse(saved);
     }
+    @Override
+    @Transactional
+    public void confirmerReservationApresPaiement(String reservationId) {
+        Reservation reservation = reservationRepository.findById(reservationId)  // ← Plus de Long.valueOf
+                .orElseThrow(() -> new RuntimeException("Réservation non trouvée : " + reservationId));
+        reservation.setStatut(StatutReservation.CONFIRME);  // ← Enum au lieu de String
+        reservationRepository.save(reservation);
+    }
+
 }

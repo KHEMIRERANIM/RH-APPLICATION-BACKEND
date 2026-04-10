@@ -16,4 +16,5 @@ public class AlternativeDTO {
     private int placesRestantes;
     private int priorite;
     private String conducteurNom;
+    private Double prix;
 }
