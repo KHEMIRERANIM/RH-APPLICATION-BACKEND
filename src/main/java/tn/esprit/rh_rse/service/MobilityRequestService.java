@@ -10,6 +10,7 @@ import tn.esprit.rh_rse.dto.request.MobilityRequestDTO;
 import tn.esprit.rh_rse.dto.request.MobilityReviewDTO;
 import tn.esprit.rh_rse.entity.Career;
 import tn.esprit.rh_rse.entity.MobilityRequest;
+import tn.esprit.rh_rse.entity.NotifCarriere;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.entity.enums.MobilityStatus;
 import tn.esprit.rh_rse.repository.CareerRepository;
@@ -27,8 +28,8 @@ public class MobilityRequestService {
     private final UserRepository userRepo;
     private final CareerRepository careerRepo;
     private final JwtUtil jwtUtil;
+    private final NotifCarriereService notificationService;
 
-    // ✅ Extrait le token brut depuis le SecurityContext credentials
     private String getCurrentToken() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.getCredentials() != null) {
@@ -38,10 +39,8 @@ public class MobilityRequestService {
     }
 
     private User getCurrentUser() {
-        // 1. Essai via email (subject du token)
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String email = auth != null ? auth.getName() : null;
-
         if (email != null && !email.isBlank()) {
             return userRepo.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable : " + email));
@@ -106,24 +105,47 @@ public class MobilityRequestService {
                 user.setUpdatedAt(LocalDateTime.now());
                 userRepo.save(user);
             });
+
+            // ✅ Notification approbation
+            notificationService.send(
+                    request.getEmployeeId(),
+                    "🎉 Demande de mobilité approuvée !",
+                    "Votre demande pour le poste \""
+                            + request.getTargetCareerTitle()
+                            + "\" a été approuvée. Votre profil a été mis à jour.",
+                    "MOBILITY_APPROVED"
+            );
+
+        } else if (dto.getStatus() == MobilityStatus.REJECTED) {
+            // ✅ Notification refus
+            notificationService.send(
+                    request.getEmployeeId(),
+                    "❌ Demande de mobilité refusée",
+                    "Votre demande pour le poste \""
+                            + request.getTargetCareerTitle() + "\" a été refusée."
+                            + (dto.getReviewComment() != null
+                            ? " Motif : " + dto.getReviewComment() : ""),
+                    "MOBILITY_REJECTED"
+            );
+
+        } else if (dto.getStatus() == MobilityStatus.ON_HOLD) {
+            // ✅ Notification suspension
+            notificationService.send(
+                    request.getEmployeeId(),
+                    "⏸️ Demande de mobilité en suspens",
+                    "Votre demande pour le poste \""
+                            + request.getTargetCareerTitle() + "\" est mise en attente."
+                            + (dto.getReviewComment() != null
+                            ? " Motif : " + dto.getReviewComment() : ""),
+                    "MOBILITY_ON_HOLD"
+            );
         }
 
         return mobilityRepo.save(request);
     }
 
-    public List<MobilityRequest> getAll() {
-        return mobilityRepo.findAll();
-    }
-
-    public List<MobilityRequest> getByEmployee(String employeeId) {
-        return mobilityRepo.findByEmployeeId(employeeId);
-    }
-
-    public List<MobilityRequest> getByStatus(MobilityStatus status) {
-        return mobilityRepo.findByStatus(status);
-    }
-
-    public void deleteRequest(String id) {
-        mobilityRepo.deleteById(id);
-    }
+    public List<MobilityRequest> getAll() { return mobilityRepo.findAll(); }
+    public List<MobilityRequest> getByEmployee(String employeeId) { return mobilityRepo.findByEmployeeId(employeeId); }
+    public List<MobilityRequest> getByStatus(MobilityStatus status) { return mobilityRepo.findByStatus(status); }
+    public void deleteRequest(String id) { mobilityRepo.deleteById(id); }
 }

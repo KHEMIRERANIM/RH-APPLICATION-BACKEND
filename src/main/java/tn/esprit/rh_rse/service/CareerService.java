@@ -16,11 +16,16 @@ import java.util.stream.Collectors;
 public class CareerService {
 
     private final CareerRepository careerRepository;
-    private final UserRepository userRepository; // ✅ Ajout
+    private final UserRepository userRepository;
 
     public Career createCareer(Career career) {
         career.setCreatedAt(LocalDateTime.now());
         career.setUpdatedAt(LocalDateTime.now());
+
+        if (career.getCertifRequises() == null) {
+            career.setCertifRequises(new java.util.ArrayList<>());
+        }
+
         return careerRepository.save(career);
     }
 
@@ -35,6 +40,7 @@ public class CareerService {
 
     public Career updateCareer(String id, Career updated) {
         Career existing = getCareerById(id);
+
         existing.setTitle(updated.getTitle());
         existing.setDescription(updated.getDescription());
         existing.setLevel(updated.getLevel());
@@ -47,6 +53,12 @@ public class CareerService {
         existing.setIsRemoteFriendly(updated.getIsRemoteFriendly());
         existing.setIsAccessibleForDisabled(updated.getIsAccessibleForDisabled());
         existing.setUserId(updated.getUserId());
+
+        // ✅ FIX IMPORTANT
+        if (updated.getCertifRequises() != null) {
+            existing.setCertifRequises(updated.getCertifRequises());
+        }
+
         existing.setUpdatedAt(LocalDateTime.now());
         return careerRepository.save(existing);
     }
@@ -57,7 +69,6 @@ public class CareerService {
         careerRepository.deleteById(id);
     }
 
-    // ✅ Nouveau : employés par poste
     public List<EmployeeSimpleResponse> getEmployeesByCareer(String careerId) {
         Career career = getCareerById(careerId);
         return userRepository.findByPoste(career.getTitle())

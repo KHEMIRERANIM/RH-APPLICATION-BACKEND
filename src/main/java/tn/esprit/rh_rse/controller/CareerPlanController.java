@@ -1,10 +1,11 @@
 package tn.esprit.rh_rse.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.dto.request.CareerPlanDTO;
 import tn.esprit.rh_rse.entity.EvolutionPlanEntity;
 import tn.esprit.rh_rse.entity.User;
@@ -13,15 +14,17 @@ import tn.esprit.rh_rse.service.CareerPlanService;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/evolution-plans")  // ✅ tiret pas underscore
+@RequestMapping("/api/evolution_plans")  // ✅ tiret
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200")
 public class CareerPlanController {
 
     private final CareerPlanService planService;
-    private final UserRepository userRepository; // ✅ ajout
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     @PostMapping
     public ResponseEntity<EvolutionPlanEntity> create(@RequestBody CareerPlanDTO dto) {
@@ -29,7 +32,6 @@ public class CareerPlanController {
                 .body(planService.createPlan(dto));
     }
 
-    // ✅ Fix : email → ID réel
     @GetMapping("/me")
     public ResponseEntity<List<EvolutionPlanEntity>> getMyPlans() {
         String email = SecurityContextHolder
@@ -58,11 +60,21 @@ public class CareerPlanController {
         return ResponseEntity.ok(planService.enrichPlan(id, payload));
     }
 
+    // ✅ Reçoit List<Object> (objets Competence) et les convertit en JSON strings
     @PutMapping("/{id}/competences")
     public ResponseEntity<EvolutionPlanEntity> saveCompetences(
             @PathVariable String id,
-            @RequestBody List<String> competences) {
-        return ResponseEntity.ok(planService.saveCompetences(id, competences));
+            @RequestBody List<Object> competences) {
+        List<String> competencesStr = competences.stream()
+                .map(c -> {
+                    try {
+                        return objectMapper.writeValueAsString(c);
+                    } catch (Exception e) {
+                        return c.toString();
+                    }
+                })
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(planService.saveCompetences(id, competencesStr));
     }
 
     @PostMapping("/{planId}/certifications")

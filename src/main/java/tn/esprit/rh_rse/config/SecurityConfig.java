@@ -56,7 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/careers/**").permitAll()
                         .requestMatchers("/api/mobility/**").authenticated()    // ✅
                         .requestMatchers("/api/evolution-plans/**").authenticated() // ✅
-                        .requestMatchers("/api/career-plans/**").authenticated()    // ✅
+                        .requestMatchers("/api/career-plans/**").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated() // ✅
                         .anyRequest().authenticated()
                 )
 

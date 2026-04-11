@@ -7,6 +7,7 @@ import tn.esprit.rh_rse.entity.enums.CareerLevel;
 import tn.esprit.rh_rse.entity.enums.CareerDomain;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Document(collection = "careers")
@@ -35,4 +36,5 @@ public class Career {
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private List<EmployeeCertification> certifRequises = new ArrayList<>();
 }
