@@ -3,6 +3,8 @@ from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import random
+import urllib.request
+import json
 
 app = Flask(__name__)
 CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
@@ -23,9 +25,10 @@ vectorizer.fit(IDEAL_BUSINESS_CORPUS)
 COACH_INTENTS = {
     "salutation": ["bonjour", "salut", "hello", "coucou", "hey", "bonsoir"],
     "amelioration": ["comment m'améliorer", "je veux m'améliorer", "j'ai des lacunes", "compétences manquantes", "que dois-je apprendre", "comment progresser", "améliorer"],
-    "culture_rse": ["c'est quoi la rse", "environnement", "écologie", "valeurs de l'entreprise", "culture d'entreprise", "inclusion", "diversité", "éthique"],
+    "culture_rse": ["c'est quoi la rse", "environnement", "écologie", "valeurs de l'entreprise", "culture d'entreprise", "inclusion", "diversité", "éthique", "entreprise"],
     "preparation_entretien": ["comment me préparer", "conseil pour l'entretien", "aide entretien", "que dire à l'entretien", "questions fréquentes", "stress"],
-    "salaire": ["salaire", "rémunération", "combien je vais gagner", "smic", "argent", "paye"]
+    "salaire": ["salaire", "rémunération", "combien je vais gagner", "smic", "argent", "paye"],
+    "trouver_offre": ["quelles sont les offres", "offre pour moi", "quel poste", "trouver un travail", "opportunités", "matcher", "compatibilité", "qui marche avec moi", "conseiller offre"]
 }
 
 intent_labels = list(COACH_INTENTS.keys())
@@ -91,6 +94,7 @@ def chat_coach():
     candidat_name = data.get('fullname', 'Candidat')
     offre_title = data.get('offreTitle', 'ce poste')
     missing_skills = data.get('missingSkills', [])
+    extracted_skills = data.get('extractedSkills', [])
     history = data.get('history', [])
     is_interview_mode = data.get('isInterviewMode', False)
     
@@ -159,6 +163,42 @@ def chat_coach():
             reply = empathic_prefix + "Pour préparer l'entretien : préparez vos réussites en méthode STAR (Situation, Tâche, Action, Résultat). Souvenez-vous, c'est aussi un échange humain, soyez vous-même !"
         elif intent == "salaire":
             reply = empathic_prefix + "La question financière est légitime. Toute grille salariale de RH_RSE est transparente et exempte de biais de genre. Elle sera abordée avec le recruteur."
+        elif intent == "trouver_offre":
+            try:
+                # 1. Fetch offers from Java Spring Boot
+                url = "http://localhost:8081/api/recrutement/offres"
+                req = urllib.request.Request(url)
+                response = urllib.request.urlopen(req)
+                offres = json.loads(response.read().decode('utf-8'))
+                
+                if not extracted_skills or len(extracted_skills) == 0:
+                     reply = empathic_prefix + "Pour vous conseiller l'offre parfaite, je dois analyser vos documents. Veuillez télécharger votre CV (et ses compétences extraites) dans une candidature d'abord !"
+                elif not offres or len(offres) == 0:
+                     reply = empathic_prefix + "Il n'y a actuellement aucune offre ouverte sur notre plateforme. Revenez plus tard !"
+                else:
+                     # 2. IA Matching
+                     skills_text = " ".join(extracted_skills)
+                     offer_corpus = [ (off.get('titre', '') + " " + off.get('description', '') + " " + " ".join(off.get('competencesRequises', []))) for off in offres ]
+                     
+                     offer_vec = TfidfVectorizer(stop_words='english')
+                     offer_matrix = offer_vec.fit_transform(offer_corpus)
+                     user_query_vec = offer_vec.transform([skills_text])
+                     
+                     similarities = cosine_similarity(user_query_vec, offer_matrix)[0]
+                     top_idx = similarities.argmax()
+                     top_score = similarities[top_idx]
+                     best_offer = offres[top_idx]
+                     
+                     if top_score > 0.05:
+                         titre = best_offer.get('titre', 'Poste Inconnu')
+                         reply = empathic_prefix + f"J'ai passé vos compétences ({', '.join(extracted_skills[:3])}...) dans mon moteur TF-IDF face à nos bases de données. L'offre '{titre}' matche à {int(top_score*100)}% !\n\n💡 Conseil d'expert RSE pour être accepté : Mettez en valeur votre maîtrise de certaines compétences clés au sein de l'offre et montrez comment vos 'Soft Skills' s'intègrent dans ce projet."
+                     else:
+                         reply = empathic_prefix + "Sur la base de vos compétences actuelles, nos offres actuelles ne semblent pas être un fit parfait. Pensez à améliorer certaines technologies demandées ('compétences manquantes') !"
+                         
+            except Exception as e:
+                print("Erreur GET API Java:", e)
+                reply = "Désolé, je suis incapable de me connecter à la base des offres d'emploi pour le moment."
+
         else:
             reply = empathic_prefix + "Je suis à votre écoute pour préparer l'entretien."
             

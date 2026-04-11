@@ -60,6 +60,8 @@ public class SecurityConfig {
                         // Public
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres/**").permitAll()
 
                         // Users — Admin only
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
