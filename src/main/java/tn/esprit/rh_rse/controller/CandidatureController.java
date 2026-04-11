@@ -84,4 +84,23 @@ public class CandidatureController {
         candidatureService.deleteCandidature(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping(value = "/{id}/contrat/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> telechargerContratPdf(@PathVariable String id) {
+        byte[] pdfBytes = candidatureService.genererContratPdf(id);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"contrat_travail.pdf\"")
+                .body(pdfBytes);
+    }
+
+    @PostMapping(value = "/{id}/coach-tips/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> telechargerCoachTipsPdf(
+            @PathVariable String id,
+            @RequestBody Map<String, String> payload) {
+        String tipsText = payload.getOrDefault("tips", "Aucun conseil fourni.");
+        byte[] pdfBytes = candidatureService.genererCoachTipsPdf(tipsText);
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"coach_tips.pdf\"")
+                .body(pdfBytes);
+    }
 }

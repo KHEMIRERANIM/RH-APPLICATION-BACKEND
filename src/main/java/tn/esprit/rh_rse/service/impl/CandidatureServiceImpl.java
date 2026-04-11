@@ -486,6 +486,138 @@ public class CandidatureServiceImpl implements CandidatureService {
 
     }
 
+    @Override
+    public byte[] genererContratPdf(String candidatureId) {
+        Candidature c = candidatureRepository.findById(candidatureId)
+                .orElseThrow(() -> new RecrutementNotFoundException("Candidature introuvable : " + candidatureId));
+                
+        tn.esprit.rh_rse.entity.User candidat = userRepository.findById(c.getCandidatId())
+                .orElseThrow(() -> new RuntimeException("Candidat introuvable"));
+                
+        Offre offre = offreRepository.findById(c.getOffreId())
+                .orElseThrow(() -> new RuntimeException("Offre introuvable"));
+
+        try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            document.addPage(page);
+
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 24);
+                contentStream.newLineAtOffset(150, 750);
+                contentStream.showText("CONTRAT DE TRAVAIL");
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 14);
+                contentStream.newLineAtOffset(50, 680);
+                contentStream.showText("ENTREPRISE : RSE CORPORATION");
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+                contentStream.newLineAtOffset(50, 640);
+                contentStream.showText("Employe(e) : " + candidat.getPrenom() + " " + candidat.getNom());
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+                contentStream.newLineAtOffset(50, 620);
+                contentStream.showText("Email : " + candidat.getEmail());
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 12);
+                contentStream.newLineAtOffset(50, 580);
+                contentStream.showText("DESIGNATION DU POSTE : " + offre.getTitre());
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+                contentStream.newLineAtOffset(50, 540);
+                contentStream.showText("SALAIRE ET REMUNERATION :");
+                contentStream.newLineAtOffset(0, -20);
+                contentStream.showText("Le(a) salarie(e) percevra une remuneration brute mensuelle fixee au " );
+                contentStream.newLineAtOffset(0, -20);
+                contentStream.showText("Salaire Minimum Interprofessionnel de Croissance (SMIC) en vigueur.");
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+                contentStream.newLineAtOffset(50, 480);
+                contentStream.showText("Fait le " + java.time.LocalDate.now().toString());
+                contentStream.endText();
+                
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 12);
+                contentStream.newLineAtOffset(50, 420);
+                contentStream.showText("Signature Employeur :                            Signature Employe(e) :");
+                contentStream.endText();
+            }
+
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            document.save(baos);
+            return baos.toByteArray();
+
+        } catch (java.io.IOException e) {
+            log.error("Erreur lors de la génération du contrat PDF pour la candidature {}", candidatureId, e);
+            throw new RuntimeException("Impossible de générer le contrat PDF.");
+        }
+    }
+
+    @Override
+    public byte[] genererCoachTipsPdf(String tipsText) {
+        try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            document.addPage(page);
+
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 20);
+                contentStream.newLineAtOffset(50, 750);
+                contentStream.showText("VOS CONSEILS CAREER COACH - RH_RSE");
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+                contentStream.newLineAtOffset(50, 700);
+                contentStream.setLeading(15f);
+
+                // Normalisation des \n reçus du frontend et Word Wrap basique pour PDFBox
+                String[] textLines = tipsText.replace("\r", "").split("\n");
+                for (String rawLine : textLines) {
+                    String[] words = rawLine.split(" ");
+                    StringBuilder dict = new StringBuilder();
+                    for (String word : words) {
+                        if (dict.length() + word.length() > 80) {
+                            contentStream.showText(dict.toString());
+                            contentStream.newLine();
+                            dict = new StringBuilder();
+                        }
+                        dict.append(word).append(" ");
+                    }
+                    contentStream.showText(dict.toString());
+                    contentStream.newLine();
+                }
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_OBLIQUE, 10);
+                contentStream.newLineAtOffset(50, 50);
+                contentStream.showText("Généré par l'Intelligence Artificielle Anti-Biais de RH_RSE.");
+                contentStream.endText();
+            }
+
+            java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+            document.save(baos);
+            return baos.toByteArray();
+
+        } catch (java.io.IOException e) {
+            log.error("Erreur lors de la génération du PDF Coach", e);
+            throw new RuntimeException("Impossible de générer le PDF du Coach.");
+        }
+    }
+
     private String labelEtape(
             StatutCandidature statut) {
 
