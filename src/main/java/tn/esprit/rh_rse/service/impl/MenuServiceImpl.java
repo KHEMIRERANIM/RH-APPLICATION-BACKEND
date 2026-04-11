@@ -72,6 +72,19 @@ public class MenuServiceImpl implements MenuService {
                 plat.setImage(platUpdated.getImage());
                 plat.setDisponible(platUpdated.getDisponible());
                 plat.setQuantite(platUpdated.getQuantite());
+                plat.setIngredients(platUpdated.getIngredients());
+                plat.setCalories(platUpdated.getCalories());
+                plat.setProteines(platUpdated.getProteines());
+                plat.setGlucides(platUpdated.getGlucides());
+                plat.setLipides(platUpdated.getLipides());
+                plat.setSucres(platUpdated.getSucres());
+                plat.setFibres(platUpdated.getFibres());
+                plat.setPctProteines(platUpdated.getPctProteines());
+                plat.setPctGlucides(platUpdated.getPctGlucides());
+                plat.setPctLipides(platUpdated.getPctLipides());
+                plat.setPmrAdapte(platUpdated.getPmrAdapte());
+                plat.setPmrRaison(platUpdated.getPmrRaison());
+                plat.setNiveauCalories(platUpdated.getNiveauCalories());
 
                 break;
             }

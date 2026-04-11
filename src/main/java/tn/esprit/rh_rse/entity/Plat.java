@@ -18,16 +18,31 @@ public class Plat {
     private String description;
 
     @NotNull(message = "Le prix est obligatoire")
-    @Positive(message = "Le prix doit être positif")
+    @Positive(message = "Le prix doit etre positif")
     private Double prix;
 
-    private List<String> tags;  // ["diabetique", "sans_gluten"]
+    private List<String> tags;
 
     private String image;
 
     private Boolean disponible = true;
 
-    @NotNull(message = "La quantité est obligatoire")
-    @Min(value = 0, message = "La quantité ne peut pas être négative")
+    @NotNull(message = "La quantite est obligatoire")
+    @Min(value = 0, message = "La quantite ne peut pas etre negative")
     private Integer quantite;
+
+    private String ingredients;
+
+    private Integer calories;
+    private Integer proteines;
+    private Integer glucides;
+    private Integer lipides;
+    private Integer sucres;
+    private Integer fibres;
+    private Integer pctProteines;
+    private Integer pctGlucides;
+    private Integer pctLipides;
+    private Boolean pmrAdapte;
+    private String pmrRaison;
+    private String niveauCalories;
 }

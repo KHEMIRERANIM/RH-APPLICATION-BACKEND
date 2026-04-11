@@ -56,7 +56,7 @@ public class CommandeServiceImpl implements CommandeService {
             }
         }
 
-        // ✅ Calcul montant
+        //  Calcul montant
         double total = menu.getPlats().stream()
                 .filter(p -> p.getPlatId() != null && commande.getPlats().contains(p.getPlatId()))
                 .mapToDouble(p -> p.getPrix() != null ? p.getPrix() : 0.0)
