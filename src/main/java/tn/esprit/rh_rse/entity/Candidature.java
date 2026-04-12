@@ -34,6 +34,7 @@ public class Candidature {
 
     private List<String> competencesExtraites;
     private List<String> competencesManquantes;
+    private String comparaisonExplication;
     private Integer anneesExperienceDetecte;
     
     // Video Test Langue

@@ -22,6 +22,7 @@ public class CandidatureResponse {
     private List<String> historiqueStatuts;
     private List<String> competencesExtraites;
     private List<String> competencesManquantes;
+    private String comparaisonExplication;
     private Integer anneesExperienceDetecte;
     private Boolean testLanguePasse;
     private Double scoreLangue;
