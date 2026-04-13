@@ -43,4 +43,7 @@ public class Bus {
     /** Occupation spécifique par jour (ex: {"2026-04-06": 15, "2026-04-07": 0}). */
     private Map<String, Integer> dailyOccupancy;
 
+    /** Arrêts intermédiaires. */
+    private List<String> arrets;
+
 }

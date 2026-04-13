@@ -92,6 +92,7 @@ public class BusServiceImpl implements BusService {
                     .dateCreation(today)
                     .photoUrl(template.getPhotoUrl())
                     .packId(packId)
+                    .arrets(template.getArrets())
                     .build();
             created.add(busRepository.save(b));
         }
@@ -119,6 +120,7 @@ public class BusServiceImpl implements BusService {
         if (busUpdates.getPlacesRestantes() != null) existing.setPlacesRestantes(busUpdates.getPlacesRestantes());
         if (busUpdates.getStatut() != null) existing.setStatut(busUpdates.getStatut());
         if (busUpdates.getPhotoUrl() != null) existing.setPhotoUrl(busUpdates.getPhotoUrl());
+        if (busUpdates.getArrets() != null) existing.setArrets(busUpdates.getArrets());
 
         Bus saved = busRepository.save(existing);
 
