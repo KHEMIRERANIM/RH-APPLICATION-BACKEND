@@ -46,4 +46,9 @@ public class TrajetController {
     public void delete(@PathVariable String id) {
         trajetService.delete(id);
     }
+
+    @PutMapping("/{id}/statut/{statut}")
+    public void updateStatus(@PathVariable String id, @PathVariable StatutTrajet statut) {
+        trajetService.updateStatus(id, statut);
+    }
 }

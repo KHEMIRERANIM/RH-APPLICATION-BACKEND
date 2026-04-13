@@ -75,4 +75,12 @@ public class ReservationController {
         reservationService.delete(id);
         return ResponseEntity.noContent().build();
     }
+
+    @PutMapping("/trajet/{trajetId}/statut/{statut}")
+    public ResponseEntity<Void> updateStatusByTrajet(
+            @PathVariable String trajetId,
+            @PathVariable StatutReservation statut) {
+        reservationService.updateStatusByTrajetId(trajetId, statut);
+        return ResponseEntity.ok().build();
+    }
 }

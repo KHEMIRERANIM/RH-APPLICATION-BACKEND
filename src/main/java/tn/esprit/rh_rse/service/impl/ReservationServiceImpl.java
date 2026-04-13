@@ -352,4 +352,14 @@ public class ReservationServiceImpl implements ReservationService {
         reservationRepository.save(reservation);
     }
 
+    @Override
+    @Transactional
+    public void updateStatusByTrajetId(String trajetId, StatutReservation statut) {
+        List<Reservation> reservations = reservationRepository.findByTrajetId(trajetId);
+        for (Reservation r : reservations) {
+            r.setStatut(statut);
+        }
+        reservationRepository.saveAll(reservations);
+    }
+
 }

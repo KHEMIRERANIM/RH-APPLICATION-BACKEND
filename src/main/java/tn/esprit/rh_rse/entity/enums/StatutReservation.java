@@ -6,5 +6,6 @@ public enum StatutReservation {
     EN_ATTENTE_ACTIVATION,
     EN_ATTENTE_PAIEMENT,
     CONFIRME,
-    ANNULE
+    ANNULE,
+    EFFECTUE
 }

@@ -3,6 +3,7 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tn.esprit.rh_rse.entity.Trajet;
 import tn.esprit.rh_rse.entity.enums.StatutTrajet;
 import tn.esprit.rh_rse.repository.TrajetRepository;
@@ -62,6 +63,15 @@ public class TrajetServiceImpl implements TrajetService {
     @Override
     public void delete(String id) {
         trajetRepository.deleteById(id);
+    }
+
+    @Override
+    @Transactional
+    public void updateStatus(String id, StatutTrajet statut) {
+        Trajet t = trajetRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trajet introuvable : " + id));
+        t.setStatut(statut);
+        trajetRepository.save(t);
     }
 
     @Override

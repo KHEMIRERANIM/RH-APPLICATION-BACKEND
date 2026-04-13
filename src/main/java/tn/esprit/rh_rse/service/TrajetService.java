@@ -12,5 +12,6 @@ public interface TrajetService {
     Trajet create(Trajet trajet);
     Trajet update(String id, Trajet trajet);
     void delete(String id);
+    void updateStatus(String id, StatutTrajet statut);
     List<Trajet> getByStatut(StatutTrajet statut);
 }
