@@ -37,13 +37,15 @@ public class Bus {
     /** Identifiant du pack (bus créés ensemble : actifs + réserve inactifs). */
     private String packId;
 
-    /** Dates spécifiques du pack pour la semaine. */
+    /** Dates spécifiques du pack pour lwra semaine. */
     private List<String> packDates;
 
     /** Occupation spécifique par jour (ex: {"2026-04-06": 15, "2026-04-07": 0}). */
     private Map<String, Integer> dailyOccupancy;
 
     /** Arrêts intermédiaires. */
-    private List<String> arrets;
+    /** Arrêts intermédiaires. */
+    /** Arrêts intermédiaires. */
+    private List<Stop> arrets;
 
 }
