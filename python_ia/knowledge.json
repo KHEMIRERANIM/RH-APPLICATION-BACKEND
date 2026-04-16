@@ -1,0 +1,19 @@
+{
+  "rse_policy": {
+    "vision": "Devenir l'entreprise la plus inclusive et durable du secteur RH Tech d'ici 2030.",
+    "environment": "Objectif Zéro Papier d'ici 2026. Réduction de l'empreinte carbone de 30% grâce au télétravail hybride.",
+    "social": "Politique de recrutement 100% Anti-Biais basée sur les compétences réelles, sans distinction d'origine, d'âge ou de genre.",
+    "ethics": "Transparence totale sur les grilles salariales et protection des données personnelles (RGPD+)."
+  },
+  "hr_rules": {
+    "telework": "3 jours de télétravail par semaine autorisés pour tous les postes techniques.",
+    "onboarding": "Un système de parrainage (buddy system) pour chaque nouveau candidat accepté.",
+    "wellness": "Abonnement sport pris en charge à 50% et accès à des sessions de méditation hebdomadaires."
+  },
+  "company_values": [
+    "Transparence",
+    "Agilité",
+    "Inclusion Radical",
+    "Responsabilité Environnementale"
+  ]
+}

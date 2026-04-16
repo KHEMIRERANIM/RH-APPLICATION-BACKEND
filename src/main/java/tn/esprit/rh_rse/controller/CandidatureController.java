@@ -103,4 +103,12 @@ public class CandidatureController {
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"coach_tips.pdf\"")
                 .body(pdfBytes);
     }
+
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<CandidatureResponse> modifierCandidature(
+            @PathVariable String id,
+            @RequestPart(value = "cv", required = false) MultipartFile cv,
+            @RequestPart(value = "lettre", required = false) MultipartFile lettre) {
+        return ResponseEntity.ok(candidatureService.modifierCandidature(id, cv, lettre));
+    }
 }

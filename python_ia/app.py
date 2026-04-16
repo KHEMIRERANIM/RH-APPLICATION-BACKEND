@@ -3,8 +3,21 @@ from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import random
-import urllib.request
 import json
+import os
+
+# --- LOADING KNOWLEDGE BASE ---
+BASE_DIR = os.path.dirname(__file__)
+def load_json(filename):
+    try:
+        with open(os.path.join(BASE_DIR, filename), 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Error loading {filename}: {e}")
+        return [] if filename.endswith('library.json') else {}
+
+KNOWLEDGE_BASE = load_json('knowledge.json')
+TRAINING_LIBRARY = load_json('training_library.json')
 
 app = Flask(__name__)
 CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
@@ -48,8 +61,28 @@ nlu_vectorizer = TfidfVectorizer()
 nlu_vectorizer.fit(intent_corpus)
 nlu_matrix = nlu_vectorizer.transform(intent_corpus)
 
-# ... (Analyse de sentiment et questions d'entretien restent identiques) ...
-# [Note: I am keeping lines 42-89 from the original file]
+INTERVIEW_QUESTIONS = [
+    "Pouvez-vous nous parler d'une expérience où vous avez dû faire preuve d'adaptabilité ?",
+    "Comment gérez-vous le stress lors d'une deadline importante ?",
+    "Que signifie pour vous l'inclusion au sein d'une équipe technique ?",
+    "Racontez-nous un projet dont vous êtes particulièrement fier.",
+    "Comment réagissez-vous face à un conflit d'opinion avec un collègue ?",
+    "Quelles sont vos méthodes pour rester à jour technologiquement ?"
+]
+
+def analyze_sentiment(text):
+    positive_words = ['bien', 'super', 'génial', 'content', 'heureux', 'passion', 'motivé', 'excellent', 'merci', 'top', 'love', 'great', 'happy']
+    negative_words = ['stress', 'peur', 'difficile', 'nul', 'triste', 'mauvais', 'problème', 'inquiétude', 'fatigué', 'hard', 'bad', 'sad']
+    
+    text = text.lower()
+    pos_score = sum(1 for word in positive_words if word in text)
+    neg_score = sum(1 for word in negative_words if word in text)
+    
+    if pos_score > neg_score:
+        return "positive"
+    elif neg_score > pos_score:
+        return "negative"
+    return "neutral"
 
 @app.route('/chat-coach', methods=['POST'])
 def chat_coach():
@@ -110,7 +143,26 @@ def chat_coach():
 
         # Seuil de déclenchement (0.1)
         if best_score < 0.1:
-            reply = empathic_prefix + "C'est une réflexion intéressante ! Toutefois, en tant que Coach RSE, je suis focalisé sur votre progression technique, nos valeurs d'entreprise et la préparation à l'entretien."
+            # --- SEMANTIC KNOWLEDGE SEARCH (RAG LITE) ---
+            found_answer = None
+            query = user_message.lower()
+            
+            # Simple keyword matching for knowledge base
+            for category, content in KNOWLEDGE_BASE.items():
+                if isinstance(content, dict):
+                    for key, val in content.items():
+                        if key in query or any(word in query for word in key.split('_')):
+                            found_answer = val
+                            break
+                elif isinstance(content, list):
+                    if category in query:
+                        found_answer = f"Nos valeurs sont : {', '.join(content)}."
+                if found_answer: break
+            
+            if found_answer:
+                reply = empathic_prefix + found_answer
+            else:
+                reply = empathic_prefix + "C'est une réflexion intéressante ! Toutefois, en tant que Coach RSE, je suis focalisé sur votre progression technique, nos valeurs d'entreprise et la préparation à l'entretien."
         else:
             intent = intent_labels[best_match_idx]
             if intent == "salutation":
@@ -121,7 +173,7 @@ def chat_coach():
                 else:
                     reply = empathic_prefix + "Votre profil technique est impeccable. Nous examinerons surtout vos soft-skills (agilité, empathie, pédagogie)."
             elif intent == "culture_rse":
-                reply = empathic_prefix + "Notre groupe prône l'inclusion sociale (Anti-biais cognitifs), le bien-être au travail et une empreinte carbone maîtrisée."
+                reply = empathic_prefix + "Notre groupe RH_RSE prône l'inclusion radicale (Anti-biais cognitifs), le bien-être au travail via la flexibilité et une empreinte carbone maîtrisée. Nous sommes certifiés 'Entreprise Responsable' !"
             elif intent == "preparation_entretien":
                 reply = empathic_prefix + "Pour préparer l'entretien : préparez vos réussites en méthode STAR (Situation, Tâche, Action, Résultat). Souvenez-vous, c'est aussi un échange humain, soyez vous-même !"
             elif intent == "salaire":
@@ -154,6 +206,19 @@ def chat_coach():
             else:
                 reply = empathic_prefix + "Comment puis-je vous aider ?"
                 
+        # --- MENTORAT PROACTIF ANTI-BIAIS ---
+        bias_keywords = ["femme", "homme", "vieux", "jeune", "origine", "nationalité", "religion"]
+        if any(w in user_message.lower() for w in bias_keywords):
+            reply = "💡 [Note RSE] : Je remarque une mention de critères d'identité. Rappelez-vous que chez RH_RSE, notre IA de matching ignore ces données pour se concentrer exclusivement sur vos compétences réelles. C'est notre garantie d'équité ! \n\n" + reply
+
+        # --- RECOMMANDATION DE FORMATIONS (UPSKILLING) ---
+        if "conseil" in user_message.lower() or "améliorer" in user_message.lower() or "apprendre" in user_message.lower():
+            for skill in missing_skills:
+                match = next((t for t in TRAINING_LIBRARY if t['skill'].lower() in skill.lower()), None)
+                if match:
+                    reply += f"\n\n🎓 [Action Formation] : Pour renforcer votre profil en {skill}, je vous suggère de suivre le module '{match['course_name']}' ({match['duration']})."
+                    break
+
         return jsonify({"reply": reply})
 
     except Exception as e:

@@ -82,139 +82,8 @@ public class CandidatureServiceImpl implements CandidatureService {
             }
         }
 
-        // --- MOTEUR IA AMÉLIORÉ AVEC EXPLAINABILITY ---
-        List<String> competencesRequises = offre.getCompetencesRequises() != null ? 
-            offre.getCompetencesRequises().stream().filter(c -> c != null && !c.trim().isEmpty()).map(String::trim).toList() : new ArrayList<>();
-
-        List<String> competencesExtraitesMatch = new ArrayList<>();
-        List<String> competencesManquantes = new ArrayList<>();
-        List<String> toutesDetectees = new ArrayList<>();
-        
-        String cvText = "";
-        if (cv != null && !cv.isEmpty()) {
-            try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(cv.getInputStream())) {
-                org.apache.pdfbox.text.PDFTextStripper pdfStripper = new org.apache.pdfbox.text.PDFTextStripper();
-                cvText = pdfStripper.getText(document).toLowerCase();
-            } catch (Exception e) {
-                log.warn("Erreur IA - Impossible de lire le PDF : {}", e.getMessage());
-            }
-        }
-
-        // 1. DÉTECTION PROACTIVE (Depuis Bibliothèque Globale)
-        if (!cvText.isEmpty()) {
-            for (String skill : SKILLS_LIBRARY) {
-                if (cvText.contains(skill.toLowerCase())) {
-                    toutesDetectees.add(skill);
-                }
-            }
-        }
-
-        // 2. MATCHING AVEC L'OFFRE (OU TITRE SI VIDE)
-        double scoreM = 0.0;
-        boolean isTitleScaleMatching = false;
-        
-        if (!competencesRequises.isEmpty() && !cvText.isEmpty()) {
-            int matchCount = 0;
-            for (String comp : competencesRequises) {
-                if (cvText.contains(comp.toLowerCase())) {
-                    competencesExtraitesMatch.add(comp);
-                    matchCount++;
-                } else {
-                    competencesManquantes.add(comp);
-                }
-            }
-            scoreM = ((double) matchCount / competencesRequises.size()) * 100.0;
-        } else if (competencesRequises.isEmpty() && !cvText.isEmpty() && !offre.getTitre().isEmpty()) {
-            // FALLBACK : MATCHING PAR TITRE (Car offre non détaillée)
-            isTitleScaleMatching = true;
-            String[] commonWords = {"en", "de", "le", "la", "les", "et", "ou", "du", "par", "pour", "dans", "un", "une", "des", "and", "the", "with", "for", "to", "in"};
-            List<String> titleKeywords = new ArrayList<>(List.of(offre.getTitre().split("\\s|'|-")));
-            titleKeywords = titleKeywords.stream()
-                .map(String::trim)
-                .map(String::toLowerCase)
-                .filter(w -> w.length() > 3) // On ignore les mots courts
-                .filter(w -> !List.of(commonWords).contains(w))
-                .distinct()
-                .toList();
-            
-            if (!titleKeywords.isEmpty()) {
-                int matchCount = 0;
-                for (String word : titleKeywords) {
-                    if (cvText.contains(word)) {
-                        competencesExtraitesMatch.add(word);
-                        matchCount++;
-                    } else {
-                        competencesManquantes.add(word);
-                    }
-                }
-                scoreM = ((double) matchCount / titleKeywords.size()) * 100.0;
-            } else {
-                scoreM = 50.0; // Cas extrême
-            }
-        } else if (!competencesRequises.isEmpty() && cvText.isEmpty()) {
-            scoreM = 0.0;
-            competencesManquantes.addAll(competencesRequises);
-        } else {
-            scoreM = 0.0; // Sécurité : n'affiche plus 100% si tout est vide
-        }
-        
-        scoreM = Math.round(scoreM * 10.0) / 10.0;
-
-        // 3. GÉNÉRATION DE L'EXPLICATION (XAI)
-        StringBuilder explication = new StringBuilder();
-        if (isTitleScaleMatching) {
-            explication.append("⚠️ Analyse basée sur le titre (offre non détaillée). ");
-        }
-
-        if (scoreM >= 80) {
-            explication.append("Profil excellent ! ");
-        } else if (scoreM >= 50) {
-            explication.append("Bon profil technique. ");
-        } else {
-            explication.append("Profil en cours de développement. ");
-        }
-
-        if (!competencesExtraitesMatch.isEmpty()) {
-            explication.append(isTitleScaleMatching ? "Mots-clés du poste trouvés : " : "L'IA a détecté vos forces en ").append(String.join(", ", competencesExtraitesMatch)).append(". ");
-        }
-        
-        if (!competencesManquantes.isEmpty()) {
-            explication.append("Cependant, maîtriser ").append(String.join(", ", competencesManquantes)).append(" vous permettrait de mieux correspondre aux besoins du poste.");
-        } else if (scoreM == 100 && !competencesRequises.isEmpty()) {
-            explication.append("Votre CV contient l'intégralité des prérequis demandés !");
-        } else if (competencesRequises.isEmpty() && !isTitleScaleMatching) {
-            explication.append("Aucune compétence spécifique n'était requise, mais l'IA a valorisé votre profil général.");
-        }
-
-        if (scoreM < 20.0) {
-            throw new RuntimeException("Candidature rejetée par l'Intelligence Artificielle : Le score d'adéquation (" + scoreM + "%) est en dessous du seuil de 20%. Analyse : " + explication.toString());
-        }
-
-        java.util.Random rand = new java.util.Random();
-        Candidature candidature = Candidature.builder()
-                .candidatId(candidatId)
-                .offreId(offreId)
-                .cvFileId(cvFileId)
-                .lettreMotivationFileId(lettreFileId)
-                .statut(StatutCandidature.NOUVEAU)
-                .scoreMatching(scoreM)
-                .competencesExtraites(toutesDetectees) // On affiche tout ce qu'on a trouvé du CV
-                .competencesManquantes(competencesManquantes)
-                .comparaisonExplication(explication.toString())
-                .anneesExperienceDetecte(rand.nextInt(6) + 1)
-                .testLanguePasse(false)
-                .scoreLangue(0.0)
-                .formationRequise(false)
-                .scoreLeadership(cvText.contains("lead") || cvText.contains("manage") ? 85 + rand.nextInt(10) : 40 + rand.nextInt(30))
-                .scoreEmpathie(cvText.contains("team") || cvText.contains("écoute") ? 80 + rand.nextInt(15) : 50 + rand.nextInt(20))
-                .scoreAdaptabilite(cvText.contains("agile") || cvText.contains("adapt") ? 90 + rand.nextInt(10) : 60 + rand.nextInt(20))
-                .scoreCommunication(cvText.contains("present") || cvText.contains("explain") ? 85 + rand.nextInt(10) : 65 + rand.nextInt(15))
-                .scoreInnovation(cvText.contains("creat") || cvText.contains("innovat") || cvText.contains("design") ? 90 + rand.nextInt(10) : 55 + rand.nextInt(25))
-                .etapeActuelle("CV Reçu")
-                .historiqueStatuts(new ArrayList<>(List.of("NOUVEAU - " + LocalDateTime.now())))
-                .datePostulation(LocalDateTime.now())
-                .dateDerniereMAJ(LocalDateTime.now())
-                .build();
+        // --- DÉCLENCHEMENT DU MOTEUR IA ---
+        executerAnalyseIA(candidature, offre, cv);
 
         Candidature saved = candidatureRepository.save(candidature);
 
@@ -524,6 +393,154 @@ public class CandidatureServiceImpl implements CandidatureService {
 
         candidatureRepository.deleteById(id);
 
+    }
+
+    @Override
+    public CandidatureResponse modifierCandidature(String id, MultipartFile cv, MultipartFile lettre) {
+        Candidature c = candidatureRepository.findById(id)
+                .orElseThrow(() -> new RecrutementNotFoundException("Candidature introuvable : " + id));
+
+        Offre offre = offreRepository.findById(c.getOffreId())
+                .orElseThrow(() -> new RecrutementNotFoundException("Offre introuvable"));
+
+        if (cv != null && !cv.isEmpty()) {
+            // Delete old CV
+            if (c.getCvFileId() != null) {
+                gridFsTemplate.delete(query(where("_id").is(c.getCvFileId())));
+            }
+            try {
+                String cvId = gridFsTemplate.store(cv.getInputStream(), "cv_" + c.getCandidatId() + ".pdf", cv.getContentType()).toString();
+                c.setCvFileId(cvId);
+                // Re-analyser avec le nouveau CV
+                executerAnalyseIA(c, offre, cv);
+            } catch (IOException e) {
+                throw new RuntimeException("Erreur update CV : " + e.getMessage());
+            }
+        }
+
+        if (lettre != null && !lettre.isEmpty()) {
+            // Delete old lettre
+            if (c.getLettreMotivationFileId() != null) {
+                gridFsTemplate.delete(query(where("_id").is(c.getLettreMotivationFileId())));
+            }
+            try {
+                String lettreId = gridFsTemplate.store(lettre.getInputStream(), "lettre_" + c.getCandidatId() + ".pdf", lettre.getContentType()).toString();
+                c.setLettreMotivationFileId(lettreId);
+            } catch (IOException e) {
+                throw new RuntimeException("Erreur update lettre : " + e.getMessage());
+            }
+        }
+
+        c.setDateDerniereMAJ(LocalDateTime.now());
+        if (c.getHistoriqueStatuts() == null) c.setHistoriqueStatuts(new ArrayList<>());
+        c.getHistoriqueStatuts().add("MISE_A_JOUR_DOCUMENTS - " + LocalDateTime.now());
+
+        return toResponse(candidatureRepository.save(c));
+    }
+
+    /**
+     * Moteur IA Premium Refactorisé
+     */
+    private void executerAnalyseIA(Candidature candidature, Offre offre, MultipartFile cv) {
+        List<String> competencesRequises = offre.getCompetencesRequises() != null ? 
+            offre.getCompetencesRequises().stream().filter(s -> s != null && !s.trim().isEmpty()).map(String::trim).toList() : new ArrayList<>();
+
+        List<String> competencesExtraitesMatch = new ArrayList<>();
+        List<String> competencesManquantes = new ArrayList<>();
+        List<String> toutesDetectees = new ArrayList<>();
+        
+        String cvText = "";
+        if (cv != null && !cv.isEmpty()) {
+            try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(cv.getInputStream())) {
+                org.apache.pdfbox.text.PDFTextStripper pdfStripper = new org.apache.pdfbox.text.PDFTextStripper();
+                cvText = pdfStripper.getText(document).toLowerCase();
+            } catch (Exception e) {
+                log.warn("Erreur IA - Impossible de lire le PDF : {}", e.getMessage());
+            }
+        }
+
+        // 1. DÉTECTION PROACTIVE
+        if (!cvText.isEmpty()) {
+            for (String skill : SKILLS_LIBRARY) {
+                if (cvText.contains(skill.toLowerCase())) {
+                    toutesDetectees.add(skill);
+                }
+            }
+        }
+
+        // 2. MATCHING
+        double scoreM = 0.0;
+        boolean isTitleScaleMatching = false;
+        
+        if (!competencesRequises.isEmpty() && !cvText.isEmpty()) {
+            int matchCount = 0;
+            for (String comp : competencesRequises) {
+                if (cvText.contains(comp.toLowerCase())) {
+                    competencesExtraitesMatch.add(comp);
+                    matchCount++;
+                } else {
+                    competencesManquantes.add(comp);
+                }
+            }
+            scoreM = ((double) matchCount / competencesRequises.size()) * 100.0;
+        } else if (competencesRequises.isEmpty() && !cvText.isEmpty() && !offre.getTitre().isEmpty()) {
+            isTitleScaleMatching = true;
+            String[] commonWords = {"en", "de", "le", "la", "les", "et", "ou", "du", "par", "pour", "dans", "un", "une", "des", "and", "the", "with", "for", "to", "in"};
+            List<String> titleKeywords = new ArrayList<>(List.of(offre.getTitre().split("\\s|'|-")));
+            titleKeywords = titleKeywords.stream()
+                .map(String::trim).map(String::toLowerCase)
+                .filter(w -> w.length() > 3).filter(w -> !List.of(commonWords).contains(w)).distinct().toList();
+            
+            if (!titleKeywords.isEmpty()) {
+                int matchCount = 0;
+                for (String word : titleKeywords) {
+                    if (cvText.contains(word)) {
+                        competencesExtraitesMatch.add(word);
+                        matchCount++;
+                    } else {
+                        competencesManquantes.add(word);
+                    }
+                }
+                scoreM = ((double) matchCount / titleKeywords.size()) * 100.0;
+            } else {
+                scoreM = 50.0;
+            }
+        } else {
+            scoreM = 0.0;
+        }
+        
+        scoreM = Math.round(scoreM * 10.0) / 10.0;
+
+        // 3. EXPLICATION (XAI)
+        StringBuilder explication = new StringBuilder();
+        if (isTitleScaleMatching) explication.append("⚠️ Analyse basée sur le titre. ");
+        if (scoreM >= 80) explication.append("Profil excellent ! ");
+        else if (scoreM >= 50) explication.append("Bon profil technique. ");
+        else explication.append("Profil en cours de développement. ");
+
+        if (!competencesExtraitesMatch.isEmpty()) {
+            explication.append("Forces détectées : ").append(String.join(", ", competencesExtraitesMatch)).append(". ");
+        }
+        if (!competencesManquantes.isEmpty()) {
+            explication.append("Manquants : ").append(String.join(", ", competencesManquantes)).append(".");
+        }
+
+        if (scoreM < 20.0 && candidature.getId() == null) { // Seulement bloquant à la postulation initiale
+            throw new RuntimeException("Candidature rejetée par l'IA : Score trop faible (" + scoreM + "%).");
+        }
+
+        java.util.Random rand = new java.util.Random();
+        candidature.setScoreMatching(scoreM);
+        candidature.setCompetencesExtraites(toutesDetectees);
+        candidature.setCompetencesManquantes(competencesManquantes);
+        candidature.setComparaisonExplication(explication.toString());
+        
+        // Soft Skills Refresh
+        candidature.setScoreLeadership(cvText.contains("lead") || cvText.contains("manage") ? 85 + rand.nextInt(10) : 40 + rand.nextInt(30));
+        candidature.setScoreEmpathie(cvText.contains("team") || cvText.contains("écoute") ? 80 + rand.nextInt(15) : 50 + rand.nextInt(20));
+        candidature.setScoreAdaptabilite(cvText.contains("agile") || cvText.contains("adapt") ? 90 + rand.nextInt(10) : 60 + rand.nextInt(20));
+        candidature.setScoreCommunication(cvText.contains("present") || cvText.contains("explain") ? 85 + rand.nextInt(10) : 65 + rand.nextInt(15));
+        candidature.setScoreInnovation(cvText.contains("creat") || cvText.contains("innovat") || cvText.contains("design") ? 90 + rand.nextInt(10) : 55 + rand.nextInt(25));
     }
 
     @Override

@@ -1,0 +1,44 @@
+[
+  {
+    "skill": "Docker",
+    "course_name": "Maîtriser la Conteneurisation avec Docker",
+    "duration": "15 heures",
+    "level": "Intermédiaire",
+    "link": "/formations/docker-base"
+  },
+  {
+    "skill": "Kubernetes",
+    "course_name": "Orchestration Cloud avec K8s",
+    "duration": "20 heures",
+    "level": "Avancé",
+    "link": "/formations/k8s-master"
+  },
+  {
+    "skill": "Angular",
+    "course_name": "Angular Pro : Signaux et SSR",
+    "duration": "12 heures",
+    "level": "Avancé",
+    "link": "/formations/angular-upgrade"
+  },
+  {
+    "skill": "Spring Boot",
+    "course_name": "Microservices avec Spring Boot 3",
+    "duration": "18 heures",
+    "level": "Intermédiaire",
+    "link": "/formations/spring-microservices"
+  },
+  {
+    "skill": "Leadership",
+    "course_name": "Devenir un Tech Lead Empathique",
+    "duration": "8 heures",
+    "level": "Soft Skills",
+    "link": "/formations/leadership-rse"
+  },
+  {
+    "skill": "Python",
+    "course_name": "Python pour l'IA et la Data Science",
+    "duration": "25 heures",
+    "level": "Intermédiaire",
+    "link": "/formations/python-ia"
+  }
+]

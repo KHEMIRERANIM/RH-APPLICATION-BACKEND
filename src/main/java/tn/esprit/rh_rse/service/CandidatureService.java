@@ -18,6 +18,7 @@ public interface CandidatureService {
     Map<StatutCandidature, List<CandidatureResponse>> getKanban(String offreId);
     List<CandidatureResponse> getTopCandidatsByScore(String offreId);
     CandidatureResponse soumettreTestLangue(String candidatureId, Double scoreLangue);
+    CandidatureResponse modifierCandidature(String id, MultipartFile cv, MultipartFile lettre);
     byte[] genererContratPdf(String candidatureId);
     byte[] genererCoachTipsPdf(String tipsText);
     void deleteCandidature(String id);
