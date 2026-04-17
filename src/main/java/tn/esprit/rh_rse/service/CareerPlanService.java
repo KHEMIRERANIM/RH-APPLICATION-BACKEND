@@ -209,28 +209,40 @@ public class CareerPlanService {
     }
 
     // ── UPLOAD FICHIER POUR CERTIFICATION ─────────────────────────────────
-    public EvolutionPlanEntity uploadCertificationFile(
-            String planId, String certifId, MultipartFile file) throws IOException {
+    public Map<String, String> uploadCertificationFile(
+            String planId,
+            String certifId,
+            MultipartFile file) throws IOException {
 
         EvolutionPlanEntity plan = repo.findById(planId)
                 .orElseThrow(() -> new RuntimeException("Plan introuvable"));
+
         List<EmployeeCertification> certifs = plan.getCertifications();
-        if (certifs == null) throw new RuntimeException("Aucune certification trouvée");
+        if (certifs == null) {
+            throw new RuntimeException("Aucune certification trouvée dans ce plan");
+        }
 
         EmployeeCertification target = certifs.stream()
                 .filter(c -> c.getId().equals(certifId))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Certification introuvable"));
 
+        // Création du dossier d'upload si nécessaire
         Path uploadPath = Paths.get(uploadDir);
-        if (!Files.exists(uploadPath)) Files.createDirectories(uploadPath);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
 
         String originalName = file.getOriginalFilename();
-        String extension    = originalName.substring(originalName.lastIndexOf("."));
-        String uniqueName   = UUID.randomUUID().toString() + extension;
-        Path   filePath     = uploadPath.resolve(uniqueName);
+        String extension = originalName != null ?
+                originalName.substring(originalName.lastIndexOf(".")) : ".pdf";
+
+        String uniqueName = "certif_" + certifId + "_" + System.currentTimeMillis() + extension;
+
+        Path filePath = uploadPath.resolve(uniqueName);
         Files.write(filePath, file.getBytes());
 
+        // Mise à jour de la certification
         target.setFichierNom(originalName);
         target.setFichierUrl("/api/evolution-plans/files/" + uniqueName);
 
@@ -239,18 +251,19 @@ public class CareerPlanService {
         }
 
         plan.setUpdatedAt(LocalDateTime.now());
-        return repo.save(plan);
-    }
+        repo.save(plan);
 
-    // ── SERVIR FICHIER ────────────────────────────────────────────────────
-    public byte[] getFile(String filename) throws IOException {
-        Path filePath = Paths.get(uploadDir).resolve(filename);
-        if (!Files.exists(filePath)) throw new RuntimeException("Fichier introuvable");
-        return Files.readAllBytes(filePath);
+        // Retour au format Map (attendu par Angular et le Controller)
+        return Map.of(
+                "fileName", originalName != null ? originalName : uniqueName,
+                "fileUrl", "/api/evolution-plans/files/" + uniqueName,
+                "message", "Fichier uploadé avec succès"
+        );
     }
 
     // ── DELETE PLAN ───────────────────────────────────────────────────────
     public void deletePlan(String id) {
         repo.deleteById(id);
     }
+
 }

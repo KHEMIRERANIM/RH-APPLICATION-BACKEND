@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import tn.esprit.rh_rse.dto.request.CareerPlanDTO;
 import tn.esprit.rh_rse.entity.EvolutionPlanEntity;
 import tn.esprit.rh_rse.entity.User;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/evolution_plans")  // ✅ tiret
+@RequestMapping("/api/evolution_plans")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:4200")
 public class CareerPlanController {
@@ -26,6 +27,9 @@ public class CareerPlanController {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // ========================
+    // CRUD de base
+    // ========================
     @PostMapping
     public ResponseEntity<EvolutionPlanEntity> create(@RequestBody CareerPlanDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -34,8 +38,7 @@ public class CareerPlanController {
 
     @GetMapping("/me")
     public ResponseEntity<List<EvolutionPlanEntity>> getMyPlans() {
-        String email = SecurityContextHolder
-                .getContext().getAuthentication().getName();
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found: " + email));
         return ResponseEntity.ok(planService.getByEmployeeId(user.getId()));
@@ -60,7 +63,6 @@ public class CareerPlanController {
         return ResponseEntity.ok(planService.enrichPlan(id, payload));
     }
 
-    // ✅ Reçoit List<Object> (objets Competence) et les convertit en JSON strings
     @PutMapping("/{id}/competences")
     public ResponseEntity<EvolutionPlanEntity> saveCompetences(
             @PathVariable String id,
@@ -90,6 +92,32 @@ public class CareerPlanController {
             @PathVariable String certifId,
             @RequestBody Object certif) {
         return ResponseEntity.ok(planService.updateCertification(planId, certifId, certif));
+    }
+
+    // ========================
+// UPLOAD FICHIER - CORRIGÉ
+// ========================
+    @PostMapping("/{planId}/certifications/{certifId}/upload")
+    public ResponseEntity<Map<String, String>> uploadCertificationFile(
+            @PathVariable String planId,
+            @PathVariable String certifId,
+            @RequestParam("file") MultipartFile file) {
+
+        if (file.isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("error", "Le fichier est vide"));
+        }
+
+        try {
+            // On appelle le service qui doit retourner un Map
+            Map<String, String> result = planService.uploadCertificationFile(planId, certifId, file);
+            return ResponseEntity.ok(result);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Erreur lors de l'upload : " + e.getMessage()));
+        }
     }
 
     @DeleteMapping("/{id}")
