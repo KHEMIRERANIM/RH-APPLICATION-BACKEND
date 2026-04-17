@@ -7,7 +7,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.entity.Offre;
 import tn.esprit.rh_rse.entity.enums.CategorieOffre;
+import tn.esprit.rh_rse.dto.response.UrgenceDto;
 import tn.esprit.rh_rse.service.OffreService;
+import tn.esprit.rh_rse.service.UrgenceAIService;
 
 import java.util.List;
 
@@ -17,6 +19,7 @@ import java.util.List;
 public class OffreController {
 
     private final OffreService offreService;
+    private final UrgenceAIService urgenceAIService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
@@ -32,6 +35,12 @@ public class OffreController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<Offre> getById(@PathVariable("id") String id) {
         return ResponseEntity.ok(offreService.getById(id));
+    }
+
+    @GetMapping("/{id}/urgence")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
+    public ResponseEntity<UrgenceDto> evaluerUrgence(@PathVariable("id") String id) {
+        return ResponseEntity.ok(urgenceAIService.evaluerUrgence(id));
     }
 
     @GetMapping("/partenaire/{idPartenaire}")

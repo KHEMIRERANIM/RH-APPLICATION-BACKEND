@@ -35,7 +35,7 @@ public class StatAvantageController {
 
     @GetMapping("/par-mois")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<StatMensuelleDto> getStatParMois(@RequestParam(required = false) Integer annee) {
+    public List<StatMensuelleDto> getStatParMois(@RequestParam(name = "annee", required = false) Integer annee) {
         return statAvantageService.getStatParMois(annee);
     }
 
