@@ -1,5 +1,4 @@
 package tn.esprit.rh_rse.controller;
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -7,8 +6,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.entity.Commande;
+import tn.esprit.rh_rse.entity.PaiementPlat;
 import tn.esprit.rh_rse.service.CommandeService;
-
+import tn.esprit.rh_rse.service.PaiementPlatService;
 import java.util.List;
 import java.util.Map;
 
@@ -18,8 +18,8 @@ import java.util.Map;
 @Validated
 @RequiredArgsConstructor
 public class CommandeController {
-
     private final CommandeService commandeService;
+    private final PaiementPlatService paiementPlatService;
 
     @GetMapping
     public ResponseEntity<List<Commande>> getAll() {
@@ -52,13 +52,29 @@ public class CommandeController {
         return ResponseEntity.ok(commandeService.updateStatut(id, statut));
     }
 
+    @PatchMapping("/{id}/plats")
+    public ResponseEntity<Commande> updatePlats(
+            @PathVariable String id,
+            @RequestBody List<String> plats) {
+        return ResponseEntity.ok(commandeService.updatePlats(id, plats));
+    }
+
+    @PostMapping("/{id}/payer")
+    public ResponseEntity<PaiementPlat> payer(
+            @PathVariable String id,
+            @RequestParam String modePaiement) {
+        if (!modePaiement.matches("especes|salaire")) {
+            return ResponseEntity.badRequest().build();
+        }
+        return ResponseEntity.ok(paiementPlatService.payerCommande(id, modePaiement));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable String id) {
         commandeService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
-    // --------- Nouveaux endpoints statistiques ---------
     @GetMapping("/stats/jour")
     public ResponseEntity<Map<String, Long>> getNombreCommandesParJour() {
         return ResponseEntity.ok(commandeService.getNombreCommandesParJour());

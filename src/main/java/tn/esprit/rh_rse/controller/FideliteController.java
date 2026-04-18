@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.entity.Fidelite;
 import tn.esprit.rh_rse.service.FideliteService;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/fidelite")
@@ -17,6 +18,11 @@ public class FideliteController {
     @GetMapping("/{userId}")
     public ResponseEntity<Fidelite> getFidelite(@PathVariable String userId) {
         return ResponseEntity.ok(fideliteService.getOrCreate(userId));
+    }
+
+    @GetMapping("/all")
+    public ResponseEntity<List<Fidelite>> getAllFidelites() {
+        return ResponseEntity.ok(fideliteService.getAll());
     }
 
     @PostMapping("/{userId}/points")

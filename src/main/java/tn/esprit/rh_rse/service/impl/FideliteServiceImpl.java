@@ -6,6 +6,7 @@ import tn.esprit.rh_rse.entity.Fidelite;
 import tn.esprit.rh_rse.repository.FideliteRepository;
 import tn.esprit.rh_rse.service.FideliteService;
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -29,7 +30,8 @@ public class FideliteServiceImpl implements FideliteService {
         int pointsGagnes = (int)(montant * Fidelite.POINTS_PAR_TND);
         f.setPoints(f.getPoints() + pointsGagnes);
         f.setTotalDepense(f.getTotalDepense() + montant);
-        f.getHistorique().add("+" + pointsGagnes + " pts le " + LocalDate.now() + " (" + montant + " TND)");
+        f.getHistorique().add("+" + pointsGagnes + " pts le " + LocalDate.now()
+                + " (" + montant + " TND)");
         if (f.getPoints() >= Fidelite.SEUIL_REDUCTION) {
             f.setReductionDisponible(true);
         }
@@ -44,7 +46,13 @@ public class FideliteServiceImpl implements FideliteService {
         }
         f.setPoints(f.getPoints() - Fidelite.SEUIL_REDUCTION);
         f.setReductionDisponible(f.getPoints() >= Fidelite.SEUIL_REDUCTION);
-        f.getHistorique().add("Reduction de " + f.getMontantReduction() + " TND utilisee le " + LocalDate.now());
+        f.getHistorique().add("Reduction de " + f.getMontantReduction()
+                + " TND utilisee le " + LocalDate.now());
         return fideliteRepository.save(f);
+    }
+
+    @Override
+    public List<Fidelite> getAll() {
+        return fideliteRepository.findAll();
     }
 }

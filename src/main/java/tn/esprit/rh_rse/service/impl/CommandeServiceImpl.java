@@ -64,7 +64,7 @@ public class CommandeServiceImpl implements CommandeService {
             }
         }
 
-        // Calcul total brut
+        // Calcul montant brut
         double total = menu.getPlats().stream()
                 .filter(p -> p.getPlatId() != null && commande.getPlats().contains(p.getPlatId()))
                 .mapToDouble(p -> p.getPrix() != null ? p.getPrix() : 0.0)
@@ -74,31 +74,27 @@ public class CommandeServiceImpl implements CommandeService {
             throw new RuntimeException("Aucun plat valide sélectionné !");
         }
 
-        // ✅ Appliquer la réduction fidélité si disponible
+        // ✅ Appliquer réduction fidélité si disponible
         Fidelite fidelite = fideliteService.getOrCreate(commande.getUserId());
         double totalApresReduction = total;
 
         if (fidelite.isReductionDisponible()) {
-            double reduction = fidelite.getMontantReduction(); // 5.0 TND
+            double reduction = fidelite.getMontantReduction();
             totalApresReduction = Math.max(0, total - reduction);
             commande.setReductionAppliquee(true);
             commande.setMontantReduction(reduction);
-            log.info("[Fidélité] Réduction de {} TND appliquée pour user {} : {} → {} TND",
-                    reduction, commande.getUserId(), total, totalApresReduction);
-            // Consommer la réduction
             fideliteService.utiliserReduction(commande.getUserId());
+            log.info("[Fidélité] Réduction {} TND appliquée pour user {} : {} → {} TND",
+                    reduction, commande.getUserId(), total, totalApresReduction);
+        } else {
+            commande.setReductionAppliquee(false);
+            commande.setMontantReduction(0.0);
         }
 
         commande.setMontantTotal(totalApresReduction);
+        commande.setMontantBrut(total);
 
         Commande saved = commandeRepository.save(commande);
-
-        // Créditer les points sur le montant APRÈS réduction
-        try {
-            fideliteService.ajouterPoints(commande.getUserId(), totalApresReduction);
-        } catch (Exception e) {
-            log.warn("Erreur crédits points fidélité pour user {}: {}", commande.getUserId(), e.getMessage());
-        }
 
         // Décrémenter stock
         for (String platId : commande.getPlats()) {
@@ -109,7 +105,77 @@ public class CommandeServiceImpl implements CommandeService {
         }
         menuRepository.save(menu);
 
+        log.info("[Commande] Créée — {} plat(s) — {} TND brut / {} TND net",
+                commande.getPlats().size(), total, totalApresReduction);
+
         return saved;
+    }
+
+    @Override
+    @Transactional
+    public Commande updatePlats(String id, List<String> nouveauxPlats) {
+        Commande commande = getById(id);
+
+        if (!"en_attente".equals(commande.getStatut())) {
+            throw new RuntimeException("Modification impossible : la commande n'est plus en attente.");
+        }
+
+        Menu menu = menuRepository.findById(commande.getMenuId())
+                .orElseThrow(() -> new RuntimeException("Menu non trouvé : " + commande.getMenuId()));
+
+        if (menu.getPlats() == null) menu.setPlats(Collections.emptyList());
+
+        // 1. Remettre le stock des anciens plats
+        for (String platId : commande.getPlats()) {
+            menu.getPlats().stream()
+                    .filter(p -> platId.equals(p.getPlatId()))
+                    .findFirst()
+                    .ifPresent(p -> p.setQuantite(p.getQuantite() + 1));
+        }
+
+        // 2. Vérifier le stock pour les nouveaux plats
+        for (String platId : nouveauxPlats) {
+            Plat plat = menu.getPlats().stream()
+                    .filter(p -> platId.equals(p.getPlatId()))
+                    .findFirst()
+                    .orElseThrow(() -> new RuntimeException("Plat introuvable : " + platId));
+            if (plat.getQuantite() == null || plat.getQuantite() <= 0) {
+                throw new RuntimeException("Le plat '" + plat.getNom() + "' est en rupture de stock !");
+            }
+        }
+
+        // 3. Décrémenter le stock des nouveaux plats
+        for (String platId : nouveauxPlats) {
+            menu.getPlats().stream()
+                    .filter(p -> platId.equals(p.getPlatId()))
+                    .findFirst()
+                    .ifPresent(p -> p.setQuantite(Math.max(0, p.getQuantite() - 1)));
+        }
+
+        menuRepository.save(menu);
+
+        // 4. Recalculer montant brut
+        double nouveauTotal = nouveauxPlats.stream()
+                .mapToDouble(platId -> menu.getPlats().stream()
+                        .filter(p -> platId.equals(p.getPlatId()))
+                        .mapToDouble(p -> p.getPrix() != null ? p.getPrix() : 0.0)
+                        .findFirst().orElse(0.0))
+                .sum();
+
+        // 5. Réappliquer réduction si elle était déjà appliquée sur cette commande
+        double totalNet = nouveauTotal;
+        if (commande.isReductionAppliquee()) {
+            totalNet = Math.max(0, nouveauTotal - commande.getMontantReduction());
+        }
+
+        commande.setPlats(nouveauxPlats);
+        commande.setMontantTotal(totalNet);
+        commande.setMontantBrut(nouveauTotal);
+
+        log.info("[Commande] {} modifiée — {} plat(s) — {} TND brut / {} TND net",
+                id, nouveauxPlats.size(), nouveauTotal, totalNet);
+
+        return commandeRepository.save(commande);
     }
 
     @Override

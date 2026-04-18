@@ -1,7 +1,5 @@
 package tn.esprit.rh_rse.service;
-
 import tn.esprit.rh_rse.entity.Commande;
-
 import java.util.List;
 import java.util.Map;
 
@@ -10,10 +8,9 @@ public interface CommandeService {
     Commande getById(String id);
     Commande save(Commande commande);
     Commande updateStatut(String id, String statut);
+    Commande updatePlats(String id, List<String> plats);
     void delete(String id);
     List<Commande> getByUser(String userId);
-
-    // Nouveaux endpoints statistiques
     Map<String, Long> getNombreCommandesParJour();
     Map<String, Long> getPlatsPlusCommandes();
 }
