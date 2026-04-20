@@ -78,11 +78,14 @@ public class ReservationServiceImpl implements ReservationService {
             throw new RuntimeException("Plus de places disponibles");
         }
 
+        // On ne décrémente plus la place ici, on attend l'acceptation du conducteur dans la méthode update()
+        /*
         trajet.setPlacesRestantes(trajet.getPlacesRestantes() - 1);
         if (trajet.getPlacesRestantes() == 0) {
             trajet.setStatut(StatutTrajet.COMPLET);
         }
         trajetRepository.save(trajet);
+        */
 
         double distanceKm   = request.getDistanceKm() != null ? request.getDistanceKm() : 25.0;
         double co2Solo      = distanceKm * 0.21;
@@ -129,21 +132,38 @@ public class ReservationServiceImpl implements ReservationService {
         Reservation existing = reservationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Reservation introuvable : " + id));
 
-        // Annulation : remettre la place
+        // Annulation : remettre la place SEULEMENT si elle avait été prise (acceptée ou confirmée)
         if (request.getStatut() == StatutReservation.ANNULE
                 && existing.getStatut() != StatutReservation.ANNULE) {
-            trajetRepository.findById(existing.getTrajetId()).ifPresent(trajet -> {
-                trajet.setPlacesRestantes(trajet.getPlacesRestantes() + 1);
-                if (trajet.getStatut() == StatutTrajet.COMPLET) {
-                    trajet.setStatut(StatutTrajet.ACTIF);
-                }
-                trajetRepository.save(trajet);
-            });
+            
+            if (existing.getStatut() == StatutReservation.EN_ATTENTE_PAIEMENT || existing.getStatut() == StatutReservation.CONFIRME) {
+                trajetRepository.findById(existing.getTrajetId()).ifPresent(trajet -> {
+                    trajet.setPlacesRestantes(trajet.getPlacesRestantes() + 1);
+                    if (trajet.getStatut() == StatutTrajet.COMPLET) {
+                        trajet.setStatut(StatutTrajet.ACTIF);
+                    }
+                    trajetRepository.save(trajet);
+                });
+            }
         }
 
-        // Acceptation : début du délai de paiement (15 min)
+        // Acceptation : décrémenter la place et début du délai de paiement (15 min)
         if (request.getStatut() == StatutReservation.EN_ATTENTE_PAIEMENT
                 && existing.getStatut() != StatutReservation.EN_ATTENTE_PAIEMENT) {
+            
+            Trajet trajet = trajetRepository.findById(existing.getTrajetId())
+                    .orElseThrow(() -> new RuntimeException("Trajet introuvable"));
+            
+            if (trajet.getPlacesRestantes() <= 0) {
+                throw new RuntimeException("Désolé, il n'y a plus de places disponibles pour ce trajet.");
+            }
+            
+            trajet.setPlacesRestantes(trajet.getPlacesRestantes() - 1);
+            if (trajet.getPlacesRestantes() == 0) {
+                trajet.setStatut(StatutTrajet.COMPLET);
+            }
+            trajetRepository.save(trajet);
+            
             existing.setDateAcceptation(LocalDateTime.now());
         }
 
@@ -207,6 +227,7 @@ public class ReservationServiceImpl implements ReservationService {
                     "Votre reservation a ete confirmee"
             );
         } else if (request.getStatut() == StatutReservation.ANNULE) {
+            // Notification au passager
             notificationService.envoyerNotification(
                     existing.getEmployeId(),
                     "SYSTEME",
@@ -214,6 +235,17 @@ public class ReservationServiceImpl implements ReservationService {
                     TypeNotification.RESERVATION,
                     "Votre reservation a ete annulee"
             );
+
+            // Notification au CONDUCTEUR
+            trajetRepository.findById(existing.getTrajetId()).ifPresent(trajet -> {
+                notificationService.envoyerNotification(
+                        trajet.getEmployeId(), // ID du Conducteur
+                        "SYSTEME",
+                        trajet.getId(),
+                        TypeNotification.RESERVATION,
+                        "Le passager (" + existing.getEmployeId() + ") a annule sa reservation pour votre trajet."
+                );
+            });
         }
 
         existing.setStatut(request.getStatut());

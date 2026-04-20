@@ -1,7 +1,7 @@
 package tn.esprit.rh_rse.controller;
 
 import com.stripe.exception.StripeException;
-import com.stripe.model.checkout.Session;
+import com.stripe.model.PaymentIntent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -35,11 +35,20 @@ public class PaiementController {
             }
             String reservationId = body.get("reservationId").toString();
             Double montant = Double.valueOf(body.get("montant").toString());
+            
+            // Extract Stripe Token (PCI Compliant way)
+            String stripeToken = body.get("stripeToken") != null ? body.get("stripeToken").toString() : null;
 
-            Session session = stripeService.createCheckoutSession(reservationId, montant);
+            PaymentIntent intent = stripeService.createPaymentIntent(reservationId, montant, stripeToken);
 
             Map<String, String> response = new HashMap<>();
-            response.put("redirectUrl", session.getUrl());
+            response.put("clientSecret", intent.getClientSecret());
+            response.put("status", intent.getStatus());
+
+            if ("succeeded".equals(intent.getStatus())) {
+                reservationService.confirmerReservationApresPaiement(reservationId);
+            }
+            
             return ResponseEntity.ok(response);
 
         } catch (StripeException e) {
@@ -48,6 +57,22 @@ public class PaiementController {
         } catch (Exception e) {
             log.error("Erreur: {}", e.getMessage());
             return ResponseEntity.badRequest().body(Map.of("error", "Erreur lors de la création du paiement"));
+        }
+    }
+
+    @PostMapping("/stripe/refund")
+    public ResponseEntity<Map<String, String>> refundPayment(@RequestBody Map<String, Object> body) {
+        try {
+            String reservationId = body.get("reservationId").toString();
+            stripeService.refundPayment(reservationId);
+            
+            Map<String, String> response = new HashMap<>();
+            response.put("status", "refunded");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
         }
     }
 
