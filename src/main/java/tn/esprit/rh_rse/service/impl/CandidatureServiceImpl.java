@@ -2,6 +2,8 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -18,12 +20,21 @@ import tn.esprit.rh_rse.repository.UserRepository;
 import tn.esprit.rh_rse.service.CandidatureService;
 import tn.esprit.rh_rse.service.EmailService;
 import tn.esprit.rh_rse.service.QrCodeService;
+import tn.esprit.rh_rse.dto.response.CVAiDTO;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.http.*;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static org.springframework.data.mongodb.core.query.Criteria.where;
@@ -41,6 +52,10 @@ public class CandidatureServiceImpl implements CandidatureService {
     private final UserRepository userRepository;
     private final GridFsTemplate gridFsTemplate;
     private final EntretienRepository entretienRepository;
+    private final RestTemplate restTemplate;
+
+    private static final String PYTHON_AI_URL = "http://localhost:5000/extract-profile";
+    private static final Pattern EXPERIENCE_PATTERN = Pattern.compile("(\\d{1,2})\\s*(ans?|years?)", Pattern.CASE_INSENSITIVE);
 
     private static final List<String> SKILLS_LIBRARY = List.of(
             "Java", "Spring Boot", "Angular", "React", "Vue.js", "Python", "Docker", "Kubernetes", "AWS", "Azure",
@@ -92,7 +107,37 @@ public class CandidatureServiceImpl implements CandidatureService {
         candidature.setDateDerniereMAJ(LocalDateTime.now());
         candidature.setHistoriqueStatuts(new ArrayList<>());
 
-        executerAnalyseIA(candidature, offre, cv);
+        // --- ANALYSE IA RÉELLE (Appel API Python) ---
+        CVAiDTO aiResult = analyserCVAvecIA(cv);
+        
+        // --- VALIDATION STRICTE ---
+        if (aiResult == null || aiResult.getProfile() == null) {
+            throw new RuntimeException("L'analyse IA a échoué. Veuillez soumettre un CV valide au format PDF.");
+        }
+
+        CVAiDTO.ProfileDTO profile = aiResult.getProfile();
+        
+        // Blocage si informations critiques manquantes (Signe d'un CV vide ou fictif)
+        if (profile.getNomComplet() == null || profile.getEmail() == null) {
+            throw new RuntimeException("Impossible d'identifier le candidat (Nom/Email manquant). Votre CV semble incomplet ou illisible.");
+        }
+
+        // Blocage si aucune compétence détectée
+        if (profile.getSkills() == null || profile.getSkills().isEmpty()) {
+            throw new RuntimeException("Aucune compétence technique n'a été détectée dans votre CV. Postulation refusée car le profil ne correspond pas.");
+        }
+
+        // Mise à jour de la candidature avec les données réelles de l'IA
+        candidature.setCompetencesExtraites(profile.getSkills());
+        candidature.setAnneesExperienceDetecte(profile.getAnneesExperience() != null ? profile.getAnneesExperience() : 0);
+
+        // Calcul du score de matching réel
+        executerAnalyseIA(candidature, offre, profile);
+
+        // Blocage si score trop bas
+        if (candidature.getScoreMatching() < 5.0) {
+            throw new RuntimeException("Votre profil ne correspond pas aux exigences minimales de cette offre (Score matching < 5%).");
+        }
 
         Candidature saved = candidatureRepository.save(candidature);
 
@@ -173,6 +218,14 @@ public class CandidatureServiceImpl implements CandidatureService {
         Candidature c = candidatureRepository.findById(candidatureId).orElseThrow(() -> new RecrutementNotFoundException("Introuvable"));
         c.setScoreLangue(scoreLangue);
         c.setTestLanguePasse(true);
+        
+        // Si le score est inférieur à 60%, on exige une formation (cours d'anglais)
+        if (scoreLangue != null && scoreLangue < 60.0) {
+            c.setFormationRequise(true);
+        } else {
+            c.setFormationRequise(false);
+        }
+        
         return toResponse(candidatureRepository.save(c));
     }
 
@@ -194,9 +247,144 @@ public class CandidatureServiceImpl implements CandidatureService {
         return new byte[0];
     }
 
-    private void executerAnalyseIA(Candidature candidature, Offre offre, MultipartFile cv) {
-        // Logique IA existante ...
-        candidature.setScoreMatching(75.0); // Exemple
+    private CVAiDTO analyserCVAvecIA(MultipartFile cv) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("cv", cv.getResource());
+
+            HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+            ResponseEntity<CVAiDTO> response = restTemplate.postForEntity(PYTHON_AI_URL, requestEntity, CVAiDTO.class);
+
+            return response.getBody();
+        } catch (Exception e) {
+            log.error("Erreur lors de l'appel à l'API IA Python : {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private void executerAnalyseIA(Candidature candidature, Offre offre, CVAiDTO.ProfileDTO profile) {
+        List<String> requiredSkills = offre.getCompetencesRequises() == null ? List.of() : offre.getCompetencesRequises();
+        List<String> extractedSkills = profile.getSkills() == null ? List.of() : profile.getSkills();
+
+        List<String> missingSkills = requiredSkills.stream()
+                .filter(req -> extractedSkills.stream().noneMatch(ext -> normalize(ext).contains(normalize(req))))
+                .collect(Collectors.toList());
+
+        int matchedCount = requiredSkills.size() - missingSkills.size();
+        double skillCoverage = requiredSkills.isEmpty() ? 100.0 : (matchedCount * 100.0) / requiredSkills.size();
+        
+        int detectedYears = profile.getAnneesExperience() != null ? profile.getAnneesExperience() : 0;
+        double experienceScore = scoreExperience(detectedYears, offre.getNiveauExperience());
+        
+        double finalScore = (skillCoverage * 0.8) + (experienceScore * 0.2);
+        finalScore = Math.max(0.0, Math.min(100.0, finalScore));
+
+        candidature.setCompetencesManquantes(missingSkills);
+        candidature.setScoreMatching(Math.round(finalScore * 10.0) / 10.0);
+        candidature.setFormationRequise(!missingSkills.isEmpty());
+        candidature.setComparaisonExplication(buildComparisonExplanation(requiredSkills, matchedCount, skillCoverage, detectedYears, experienceScore, finalScore, missingSkills));
+    }
+
+    private String extractTextFromPdf(MultipartFile cv) {
+        if (cv == null || cv.isEmpty()) {
+            return "";
+        }
+        try (PDDocument document = PDDocument.load(cv.getInputStream())) {
+            PDFTextStripper textStripper = new PDFTextStripper();
+            return textStripper.getText(document);
+        } catch (IOException e) {
+            log.warn("Impossible de lire le CV PDF pour l'analyse IA: {}", e.getMessage());
+            return "";
+        }
+    }
+
+    private boolean containsSkill(String normalizedCv, String skill) {
+        String normalizedSkill = normalize(skill);
+        if (normalizedSkill.isBlank()) {
+            return false;
+        }
+        return normalizedCv.contains(normalizedSkill);
+    }
+
+    private String normalize(String input) {
+        if (input == null) {
+            return "";
+        }
+        return input.toLowerCase()
+                .replaceAll("[^\\p{L}\\p{Nd}\\s+#.]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private int detectYearsOfExperience(String cvText) {
+        if (cvText == null || cvText.isBlank()) {
+            return 0;
+        }
+        Matcher matcher = EXPERIENCE_PATTERN.matcher(cvText.toLowerCase());
+        int maxYears = 0;
+        while (matcher.find()) {
+            int years = Integer.parseInt(matcher.group(1));
+            if (years > maxYears) {
+                maxYears = years;
+            }
+        }
+        return maxYears;
+    }
+
+    private double scoreExperience(int detectedYears, String expectedLevel) {
+        int expectedYears = expectedYearsForLevel(expectedLevel);
+        if (expectedYears <= 0) {
+            return detectedYears > 0 ? 70.0 : 50.0;
+        }
+        if (detectedYears >= expectedYears) {
+            return 100.0;
+        }
+        return (detectedYears * 100.0) / expectedYears;
+    }
+
+    private int expectedYearsForLevel(String niveauExperience) {
+        if (niveauExperience == null || niveauExperience.isBlank()) {
+            return 0;
+        }
+        String normalized = niveauExperience.toLowerCase();
+        Matcher matcher = Pattern.compile("(\\d{1,2})").matcher(normalized);
+        if (matcher.find()) {
+            return Integer.parseInt(matcher.group(1));
+        }
+        if (normalized.contains("junior") || normalized.contains("debutant")) {
+            return 1;
+        }
+        if (normalized.contains("intermediaire") || normalized.contains("intermédiaire")) {
+            return 3;
+        }
+        if (normalized.contains("senior") || normalized.contains("confirme") || normalized.contains("confirmé")) {
+            return 5;
+        }
+        return 0;
+    }
+
+    private String buildComparisonExplanation(List<String> requiredSkills,
+                                              int matchedCount,
+                                              double skillCoverage,
+                                              int detectedYears,
+                                              double experienceScore,
+                                              double finalScore,
+                                              List<String> missingSkills) {
+        String requirementsPart = requiredSkills.isEmpty()
+                ? "Aucune compétence obligatoire n'a été définie pour cette offre."
+                : String.format("%d/%d compétences requises détectées (%.1f%%).", matchedCount, requiredSkills.size(), skillCoverage);
+
+        String experiencePart = String.format("Expérience détectée: %d an(s), score expérience %.1f%%.", detectedYears, experienceScore);
+
+        String missingPart = missingSkills.isEmpty()
+                ? "Aucune compétence manquante critique."
+                : "Compétences manquantes: " + String.join(", ", missingSkills) + ".";
+
+        return String.format("%s %s %s Score final: %.1f/100 (80%% compétences, 20%% expérience).",
+                requirementsPart, experiencePart, missingPart, finalScore);
     }
 
     private String labelEtape(StatutCandidature statut) {
@@ -217,6 +405,18 @@ public class CandidatureServiceImpl implements CandidatureService {
                 .id(c.getId()).candidatId(c.getCandidatId()).offreId(c.getOffreId())
                 .statut(c.getStatut()).etapeActuelle(c.getEtapeActuelle())
                 .scoreMatching(c.getScoreMatching()).notesRecruteur(c.getNotesRecruteur())
+                .cvFileId(c.getCvFileId()).lettreMotivationFileId(c.getLettreMotivationFileId())
+                .historiqueStatuts(c.getHistoriqueStatuts())
+                .competencesExtraites(c.getCompetencesExtraites())
+                .competencesManquantes(c.getCompetencesManquantes())
+                .comparaisonExplication(c.getComparaisonExplication())
+                .anneesExperienceDetecte(c.getAnneesExperienceDetecte())
+                .testLanguePasse(c.getTestLanguePasse()).scoreLangue(c.getScoreLangue())
+                .formationRequise(c.getFormationRequise())
+                .scoreLeadership(c.getScoreLeadership()).scoreEmpathie(c.getScoreEmpathie())
+                .scoreAdaptabilite(c.getScoreAdaptabilite()).scoreCommunication(c.getScoreCommunication())
+                .scoreInnovation(c.getScoreInnovation())
+                .datePostulation(c.getDatePostulation()).dateDerniereMAJ(c.getDateDerniereMAJ())
                 .build();
     }
 }

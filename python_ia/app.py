@@ -5,6 +5,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 import random
 import json
 import os
+import re
+import io
+import urllib.request
+from PyPDF2 import PdfReader
 
 # --- LOADING KNOWLEDGE BASE ---
 BASE_DIR = os.path.dirname(__file__)
@@ -18,9 +22,11 @@ def load_json(filename):
 
 KNOWLEDGE_BASE = load_json('knowledge.json')
 TRAINING_LIBRARY = load_json('training_library.json')
+ENGLISH_REFERENCE = load_json('english_reference.json')
 
 app = Flask(__name__)
 CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
+MAX_CV_BYTES = 5 * 1024 * 1024
 
 # VRAI DATASET (CORPUS D'ENTRAINEMENT) : Ce que cherche l'entreprise
 IDEAL_BUSINESS_CORPUS = [
@@ -83,6 +89,190 @@ def analyze_sentiment(text):
     elif neg_score > pos_score:
         return "negative"
     return "neutral"
+
+def _normalize_spaces(text):
+    return re.sub(r"\s+", " ", text or "").strip()
+
+def extract_cv_text(file_storage):
+    if not file_storage:
+        return ""
+    raw = file_storage.read()
+    file_storage.stream.seek(0)
+    if len(raw) > MAX_CV_BYTES:
+        raise ValueError("CV trop volumineux (max 5MB).")
+    try:
+        reader = PdfReader(io.BytesIO(raw))
+        pages = [page.extract_text() or "" for page in reader.pages]
+        return "\n".join(pages).strip()
+    except Exception:
+        try:
+            return raw.decode("utf-8", errors="ignore").strip()
+        except Exception:
+            return ""
+
+def _extract_first_match(pattern, text):
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    return match.group(1).strip() if match and match.group(1) else None
+
+def _extract_name(text):
+    lines = [l.strip() for l in (text or "").splitlines() if l.strip()]
+    email = _extract_first_match(r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})", text)
+    for line in lines[:8]:
+        words = line.replace("|", " ").split()
+        if 2 <= len(words) <= 4 and all(w.replace("-", "").isalpha() for w in words):
+            if email and line.lower() in email.lower():
+                continue
+            return line.title()
+    return None
+
+def _extract_phone(text):
+    patterns = [
+        r"(\+?\d[\d\s\-()]{7,}\d)",
+        r"(?:tel|phone|mobile)\s*[:\-]?\s*(\+?\d[\d\s\-()]{7,}\d)"
+    ]
+    for pattern in patterns:
+        value = _extract_first_match(pattern, text)
+        if value:
+            return _normalize_spaces(value)
+    return None
+
+def _extract_skills(text):
+    cv_text = normalize_text(text)
+    skills_library = [
+        "Java", "Spring Boot", "Angular", "React", "Vue", "Python", "Docker", "Kubernetes",
+        "AWS", "Azure", "SQL", "MongoDB", "PostgreSQL", "JavaScript", "TypeScript", "Node.js",
+        "C#", "PHP", "Laravel", "Agile", "Scrum", "DevOps", "CI/CD", "Git", "Machine Learning",
+        "Data Science", "NLP", "Spark", "Hadoop", "Leadership", "Communication", "Linux", "Selenium",
+        "Flutter", "Kotlin", "Swift", "C++", "HTML", "CSS", "Figma"
+    ]
+    found = []
+    for skill in skills_library:
+        if normalize_text(skill) in cv_text:
+            found.append(skill)
+    return found
+
+def _extract_languages(text):
+    language_map = {
+        "francais": "Francais",
+        "french": "Francais",
+        "anglais": "Anglais",
+        "english": "Anglais",
+        "arabe": "Arabe",
+        "arabic": "Arabe",
+        "espagnol": "Espagnol",
+        "spanish": "Espagnol",
+        "allemand": "Allemand",
+        "german": "Allemand",
+        "italien": "Italien",
+        "italian": "Italien"
+    }
+    normalized_text = normalize_text(text)
+    found = sorted({label for key, label in language_map.items() if key in normalized_text})
+    return found
+
+def _extract_years_experience(text):
+    years = [int(v) for v in re.findall(r"(\d{1,2})\s*(?:ans?|years?)", text or "", flags=re.IGNORECASE)]
+    return max(years) if years else None
+
+@app.route('/extract-profile', methods=['POST'])
+def extract_profile():
+    try:
+        if 'cv' not in request.files:
+            return jsonify({"error": "Fichier CV manquant (champ 'cv')."}), 400
+
+        cv_file = request.files['cv']
+        if not cv_file.filename:
+            return jsonify({"error": "Nom de fichier CV invalide."}), 400
+
+        if not cv_file.filename.lower().endswith('.pdf'):
+            return jsonify({"error": "Format non supporte. Utilisez un fichier PDF."}), 400
+
+        cv_text = extract_cv_text(cv_file)
+        if not cv_text:
+            return jsonify({"error": "Impossible d'extraire le texte du CV."}), 422
+
+        email = _extract_first_match(r"([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})", cv_text)
+        profile = {
+            "nomComplet": _extract_name(cv_text),
+            "email": email,
+            "telephone": _extract_phone(cv_text),
+            "adresse": _extract_first_match(r"(?:adresse|address)\s*[:\-]\s*([^\n]+)", cv_text),
+            "anneesExperience": _extract_years_experience(cv_text),
+            "skills": _extract_skills(cv_text),
+            "languages": _extract_languages(cv_text)
+        }
+
+        missing_fields = [
+            field for field in ["nomComplet", "email", "telephone"]
+            if not profile.get(field)
+        ]
+
+        confidence = {
+            "nomComplet": 0.75 if profile["nomComplet"] else 0.0,
+            "email": 0.95 if profile["email"] else 0.0,
+            "telephone": 0.85 if profile["telephone"] else 0.0,
+            "skills": min(1.0, len(profile["skills"]) / 10.0),
+            "languages": min(1.0, len(profile["languages"]) / 4.0),
+            "anneesExperience": 0.8 if profile["anneesExperience"] is not None else 0.0
+        }
+
+        return jsonify({
+            "profile": profile,
+            "missingFields": missing_fields,
+            "confidence": confidence
+        })
+    except ValueError as ve:
+        return jsonify({"error": str(ve)}), 400
+    except Exception as e:
+        print(f"❌ ERREUR EXTRACTION PROFIL: {str(e)}")
+        return jsonify({"error": "Erreur interne lors de l'extraction du CV."}), 500
+
+# --- REAL ENGLISH ANALYSIS ENGINE (Loaded from JSON) ---
+PROFESSIONAL_VOCABULARY = ENGLISH_REFERENCE
+
+@app.route('/analyze-speech', methods=['POST'])
+def analyze_speech():
+    try:
+        data = request.json
+        text = data.get('text', '')
+        if not text.strip():
+            return jsonify({"score": 0.0, "feedback": "Silence détecté ou transcription vide."})
+
+        # 1. Analyse de la Richesse (Vocabulaire unique)
+        words = text.lower().split()
+        unique_words = set(words)
+        richness_score = min(100, (len(unique_words) / 20) * 100) if words else 0
+
+        # 2. Analyse Sémantique (TF-IDF vs Ideal Corpus)
+        user_vec = vectorizer.transform([text])
+        ideal_vec = vectorizer.transform([" ".join(IDEAL_BUSINESS_CORPUS)])
+        similarity = cosine_similarity(user_vec, ideal_vec)[0][0] * 100
+
+        # 3. Détection de Vocabulaire Professionnel (Le "5000+ words" logic)
+        prof_score = 0
+        for cat in PROFESSIONAL_VOCABULARY.values():
+            for word in cat:
+                if word in text.lower():
+                    prof_score += 5
+        prof_score = min(100, prof_score)
+
+        # 4. Calcul du Score Final
+        # 40% Similitude sémantique, 40% Richesse Vocabulaire, 20% Mots Professionnels
+        final_score = (similarity * 0.4) + (richness_score * 0.4) + (prof_score * 0.2)
+        final_score = cap_score(final_score) # Cap at 100
+
+        return jsonify({
+            "score": round(final_score, 1),
+            "wordCount": len(words),
+            "uniqueCount": len(unique_words),
+            "feedback": "Analyse NLP complète."
+        })
+    except Exception as e:
+        print(f"❌ ERREUR ANALYSE SPEECH: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def cap_score(val):
+    return max(0.0, min(100.0, val))
 
 @app.route('/chat-coach', methods=['POST'])
 def chat_coach():
