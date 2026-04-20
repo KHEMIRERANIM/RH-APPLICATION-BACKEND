@@ -32,9 +32,9 @@ public class StatAvantageDTOs {
     @AllArgsConstructor
     @NoArgsConstructor
     @Builder
-    public static class StatTopOffreDto {
-        private String idOffre;
-        private String titreOffre;
+    public static class StatTopOffreAvantageDto {
+        private String idOffreAvantage;
+        private String titreOffreAvantage;
         private long count;
     }
 

@@ -57,4 +57,12 @@ public class NotificationController {
         String idUser = extraireIdUser(request);
         return ResponseEntity.ok(notificationService.getNbNonLues(idUser));
     }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('EMPLOYE')")
+    public ResponseEntity<Void> supprimerNotification(@PathVariable String id, HttpServletRequest request) {
+        String idUser = extraireIdUser(request);
+        notificationService.supprimerNotification(id, idUser);
+        return ResponseEntity.noContent().build();
+    }
 }

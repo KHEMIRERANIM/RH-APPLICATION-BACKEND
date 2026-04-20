@@ -7,10 +7,10 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import tn.esprit.rh_rse.config.jwt.JwtUtil;
 import tn.esprit.rh_rse.entity.AvantageReservation;
-import tn.esprit.rh_rse.entity.Offre;
+import tn.esprit.rh_rse.entity.OffreAvantage;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.service.AvantageReservationService;
-import tn.esprit.rh_rse.service.OffreService;
+import tn.esprit.rh_rse.service.OffreAvantageService;
 import tn.esprit.rh_rse.service.PdfGenerationService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,7 +26,7 @@ import java.util.List;
 public class AvantageReservationController {
 
     private final AvantageReservationService reservationService;
-    private final OffreService offreService;
+    private final OffreAvantageService offreAvantageService;
     private final UserRepository userRepository;
     private final PdfGenerationService pdfGenerationService;
     private final JwtUtil jwtUtil;
@@ -34,18 +34,18 @@ public class AvantageReservationController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<AvantageReservation> reserverOuModifier(
-            @RequestParam("idOffre") String idOffre,
+            @RequestParam("idOffreAvantage") String idOffreAvantage,
             @RequestParam("nbPersonnes") Integer nbPersonnes,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
-        return ResponseEntity.ok(reservationService.reserverOuModifier(idUser, idOffre, nbPersonnes));
+        return ResponseEntity.ok(reservationService.reserverOuModifier(idUser, idOffreAvantage, nbPersonnes));
     }
 
     /** Réservation spécifique aux offres hôtelières (adultes + enfants + formule pension) */
     @PostMapping("/hotel")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<AvantageReservation> reserverHotel(
-            @RequestParam("idOffre")    String  idOffre,
+            @RequestParam("idOffreAvantage")    String  idOffreAvantage,
             @RequestParam("nbAdultes")  Integer nbAdultes,
             @RequestParam("nbEnfants")  Integer nbEnfants,
             @RequestParam("formule")    String  formule,
@@ -53,7 +53,7 @@ public class AvantageReservationController {
             @RequestParam("checkOut") @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) java.time.LocalDate checkOut,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
-        return ResponseEntity.ok(reservationService.reserverHotel(idUser, idOffre, nbAdultes, nbEnfants, formule, checkIn, checkOut));
+        return ResponseEntity.ok(reservationService.reserverHotel(idUser, idOffreAvantage, nbAdultes, nbEnfants, formule, checkIn, checkOut));
     }
 
     @GetMapping("/mes-reservations")
@@ -78,10 +78,10 @@ public class AvantageReservationController {
         return ResponseEntity.ok(reservationService.getAllReservations());
     }
 
-    @GetMapping("/offre/{idOffre}")
+    @GetMapping("/offreAvantage/{idOffreAvantage}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<AvantageReservation>> getByOffre(@PathVariable("idOffre") String idOffre) {
-        return ResponseEntity.ok(reservationService.getByOffre(idOffre));
+    public ResponseEntity<List<AvantageReservation>> getByOffreAvantage(@PathVariable("idOffreAvantage") String idOffreAvantage) {
+        return ResponseEntity.ok(reservationService.getByOffreAvantage(idOffreAvantage));
     }
 
     private String extraireIdUser(HttpServletRequest request) {
@@ -114,7 +114,7 @@ public class AvantageReservationController {
             .findFirst()
             .orElseThrow(() -> new RuntimeException("Réservation non trouvée ou accès refusé."));
             
-        Offre o = offreService.getById(r.getIdOffre());
+        OffreAvantage o = offreAvantageService.getById(r.getIdOffreAvantage());
         User u = userRepository.findById(idUser).orElseThrow(() -> new RuntimeException("User not found"));
         
         byte[] pdfContent = pdfGenerationService.generateReservationPdf(r, o, u);

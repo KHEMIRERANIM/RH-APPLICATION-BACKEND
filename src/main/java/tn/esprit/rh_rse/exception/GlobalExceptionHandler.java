@@ -23,8 +23,8 @@ public class GlobalExceptionHandler {
     }
 
     // NOUVEAU
-    @ExceptionHandler(OffreNotFoundException.class)
-    public ResponseEntity<Map<String, Object>> handleOffreNotFound(OffreNotFoundException ex) {
+    @ExceptionHandler(OffreAvantageNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleOffreNotFound(OffreAvantageNotFoundException ex) {
         return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 

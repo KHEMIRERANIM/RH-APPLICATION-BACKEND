@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OffrePredictionRequestDto {
+public class OffreAvantagePredictionRequestDto {
     private Double prix;
     private Integer mois_evenement;
     private Integer jours_avant_debut;

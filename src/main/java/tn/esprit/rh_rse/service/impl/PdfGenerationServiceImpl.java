@@ -10,10 +10,10 @@ import com.lowagie.text.pdf.draw.LineSeparator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.entity.DetailsHotel;
-import tn.esprit.rh_rse.entity.Offre;
+import tn.esprit.rh_rse.entity.OffreAvantage;
 import tn.esprit.rh_rse.entity.AvantageReservation;
 import tn.esprit.rh_rse.entity.User;
-import tn.esprit.rh_rse.entity.enums.CategorieOffre;
+import tn.esprit.rh_rse.entity.enums.CategorieOffreAvantage;
 import tn.esprit.rh_rse.service.PdfGenerationService;
 
 import java.awt.*;
@@ -39,14 +39,14 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
     private static final Color C_WHITE     = Color.WHITE;
 
     @Override
-    public byte[] generateReservationPdf(AvantageReservation reservation, Offre offre, User user) {
+    public byte[] generateReservationPdf(AvantageReservation reservation, OffreAvantage offreAvantage, User user) {
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
 
             Document doc = new Document(PageSize.A4, 48, 48, 56, 48);
             PdfWriter.getInstance(doc, baos);
             doc.open();
 
-            boolean isHotel = CategorieOffre.HOTEL.equals(offre.getCategorie());
+            boolean isHotel = CategorieOffreAvantage.HOTEL.equals(offreAvantage.getCategorie());
             Color accent   = isHotel ? C_GREEN   : C_INDIGO;
             Color accentLt = isHotel ? C_GREEN_LT : C_INDIGO_LT;
 
@@ -79,7 +79,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             cBrand.addElement(new Paragraph("Service Mutuelle & Avantages Sociaux", fMuted));
             tHead.addCell(cBrand);
 
-            String badgeTxt = isHotel ? "RESERVATION HOTELIERE" : "RESERVATION " + offre.getCategorie().name();
+            String badgeTxt = isHotel ? "RESERVATION HOTELIERE" : "RESERVATION " + offreAvantage.getCategorie().name();
             PdfPCell cBadge = new PdfPCell(new Phrase(badgeTxt, fBadge));
             cBadge.setBackgroundColor(accent);
             cBadge.setBorder(Rectangle.NO_BORDER);
@@ -133,19 +133,19 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
             doc.add(sectionTitle("DETAIL DE L'OFFRE", fSec, accentLt));
             doc.add(Chunk.NEWLINE);
 
-            PdfPTable tOffre = twoCol();
-            row(tOffre, "Nom de l'offre", offre.getTitre(), fKey, fVal, accentLt);
-            row(tOffre, "Categorie",       offre.getCategorie().name(), fKey, fVal, accentLt);
-            if (offre.getLocalisation() != null && !offre.getLocalisation().isBlank()) {
-                row(tOffre, "Lieu / Destination", offre.getLocalisation(), fKey, fVal, accentLt);
+            PdfPTable tOffreAvantage = twoCol();
+            row(tOffreAvantage, "Nom de l'offreAvantage", offreAvantage.getTitre(), fKey, fVal, accentLt);
+            row(tOffreAvantage, "Categorie",       offreAvantage.getCategorie().name(), fKey, fVal, accentLt);
+            if (offreAvantage.getLocalisation() != null && !offreAvantage.getLocalisation().isBlank()) {
+                row(tOffreAvantage, "Lieu / Destination", offreAvantage.getLocalisation(), fKey, fVal, accentLt);
             }
-            if (offre.getDescription() != null && !offre.getDescription().isBlank()) {
-                String d = offre.getDescription();
+            if (offreAvantage.getDescription() != null && !offreAvantage.getDescription().isBlank()) {
+                String d = offreAvantage.getDescription();
                 if (d.length() > 80) d = d.substring(0, 77) + "...";
-                row(tOffre, "Description", d, fKey, fVal, accentLt);
+                row(tOffreAvantage, "Description", d, fKey, fVal, accentLt);
             }
-            tOffre.setSpacingAfter(14f);
-            doc.add(tOffre);
+            tOffreAvantage.setSpacingAfter(14f);
+            doc.add(tOffreAvantage);
 
             doc.add(new Chunk(lsThin));
             doc.add(Chunk.NEWLINE);
@@ -184,7 +184,7 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 else if ("PC".equals(form)) formFull = "Pension Complete : 3 repas inclus (PC)";
                 row(tH, "Formule de pension", formFull, fKey, fVal, accentLt);
 
-                DetailsHotel dh = offre.getDetailsHotel();
+                DetailsHotel dh = offreAvantage.getDetailsHotel();
                 if (dh != null) {
                     row(tH, "Tarif adulte / nuit",
                             String.format("%.2f DT", dh.getPrixAdulte() != null ? dh.getPrixAdulte() : 0.0),
@@ -229,23 +229,23 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
                 }
                 int nbA = reservation.getNbAdultes() != null ? reservation.getNbAdultes() : 0;
                 int nbE = reservation.getNbEnfants() != null ? reservation.getNbEnfants() : 0;
-                DetailsHotel dh = offre.getDetailsHotel();
+                DetailsHotel dh = offreAvantage.getDetailsHotel();
                 double pA = dh != null && dh.getPrixAdulte() != null ? dh.getPrixAdulte() : 0;
                 double pE = dh != null && dh.getPrixEnfant() != null ? dh.getPrixEnfant() : 0;
 
                 if (nbA > 0) {
-                    dCell(tFin, offre.getTitre() + " - Adultes", fVal);
+                    dCell(tFin, offreAvantage.getTitre() + " - Adultes", fVal);
                     dCell(tFin, nbA + " x " + nuits + " nuit(s)", fVal);
                     dCell(tFin, String.format("%.2f DT", nbA * pA * nuits), fVal);
                 }
                 if (nbE > 0) {
-                    dCell(tFin, offre.getTitre() + " - Enfants", fVal);
+                    dCell(tFin, offreAvantage.getTitre() + " - Enfants", fVal);
                     dCell(tFin, nbE + " x " + nuits + " nuit(s)", fVal);
                     dCell(tFin, String.format("%.2f DT", nbE * pE * nuits), fVal);
                 }
             } else {
-                double pC = offre.getPrixConvention() != null ? offre.getPrixConvention() : 0;
-                dCell(tFin, offre.getTitre(), fVal);
+                double pC = offreAvantage.getPrixConvention() != null ? offreAvantage.getPrixConvention() : 0;
+                dCell(tFin, offreAvantage.getTitre(), fVal);
                 dCell(tFin, reservation.getNbPersonnes() + " personne(s)", fVal);
                 dCell(tFin, String.format("%.2f DT", pC * reservation.getNbPersonnes()), fVal);
             }
@@ -347,3 +347,4 @@ public class PdfGenerationServiceImpl implements PdfGenerationService {
         t.addCell(c);
     }
 }
+

@@ -6,11 +6,11 @@ import java.util.List;
 
 public interface WishlistService {
 
-    Wishlist ajouterFavori(String idUser, String idOffre);
+    Wishlist ajouterFavori(String idUser, String idOffreAvantage);
 
-    void retirerFavori(String idUser, String idOffre);
+    void retirerFavori(String idUser, String idOffreAvantage);
 
     List<Wishlist> getMesFavoris(String idUser);
 
-    boolean estEnFavori(String idUser, String idOffre);
+    boolean estEnFavori(String idUser, String idOffreAvantage);
 }

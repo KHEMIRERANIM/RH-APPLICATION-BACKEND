@@ -64,7 +64,7 @@ public class EmailServiceImpl implements EmailService {
                 "  </div>" +
                 "  <div class=\"content\">" +
                 "    <p>Bonjour <strong>" + userName + "</strong>,</p>" +
-                "    <p>Nous sommes ravis de vous confirmer votre réservation pour l'offre détaillée ci-dessous :</p>" +
+                "    <p>Nous sommes ravis de vous confirmer votre réservation pour l'offreAvantage détaillée ci-dessous :</p>" +
                 "    <p class=\"highlight\">" + offreTitle + "</p>" +
                 "    <p>Vous trouverez en pièce jointe votre <strong>fiche de réservation officielle</strong> au format PDF. Nous vous invitons à la conserver précieusement et à la présenter si nécessaire.</p>"
                 +

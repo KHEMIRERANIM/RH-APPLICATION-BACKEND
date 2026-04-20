@@ -19,12 +19,15 @@ public class AvantageReservation {
     private String id;
 
     private String idUser;
-    private String idOffre;
+    private String idOffreAvantage;
 
     /** Nombre total de personnes (adultes + enfants) */
     private Integer nbPersonnes;
 
-    /** Prix unitaire de référence (prixConvention pour non-hôtel, prixAdulte pour hôtel) */
+    /**
+     * Prix unitaire de référence (prixConvention pour non-hôtel, prixAdulte pour
+     * hôtel)
+     */
     private Double prixUnitaire;
     private Double prixTotal;
     private StatutReservation statut;

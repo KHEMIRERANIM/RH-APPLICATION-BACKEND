@@ -5,10 +5,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import tn.esprit.rh_rse.entity.Offre;
-import tn.esprit.rh_rse.entity.enums.CategorieOffre;
+import tn.esprit.rh_rse.entity.OffreAvantage;
+import tn.esprit.rh_rse.entity.enums.CategorieOffreAvantage;
 import tn.esprit.rh_rse.dto.response.UrgenceDto;
-import tn.esprit.rh_rse.service.OffreService;
+import tn.esprit.rh_rse.service.OffreAvantageService;
 import tn.esprit.rh_rse.service.UrgenceAIService;
 
 import java.util.List;
@@ -16,25 +16,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/offres")
 @RequiredArgsConstructor
-public class OffreController {
+public class OffreAvantageController {
 
-    private final OffreService offreService;
+    private final OffreAvantageService offreAvantageService;
     private final UrgenceAIService urgenceAIService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<List<Offre>> getAllActives(
-            @RequestParam(required = false, name = "categorie") CategorieOffre categorie) {
+    public ResponseEntity<List<OffreAvantage>> getAllActives(
+            @RequestParam(required = false, name = "categorie") CategorieOffreAvantage categorie) {
         if (categorie != null) {
-            return ResponseEntity.ok(offreService.getByCategorie(categorie));
+            return ResponseEntity.ok(offreAvantageService.getByCategorie(categorie));
         }
-        return ResponseEntity.ok(offreService.getAllActives());
+        return ResponseEntity.ok(offreAvantageService.getAllActives());
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
-    public ResponseEntity<Offre> getById(@PathVariable("id") String id) {
-        return ResponseEntity.ok(offreService.getById(id));
+    public ResponseEntity<OffreAvantage> getById(@PathVariable("id") String id) {
+        return ResponseEntity.ok(offreAvantageService.getById(id));
     }
 
     @GetMapping("/{id}/urgence")
@@ -45,35 +45,35 @@ public class OffreController {
 
     @GetMapping("/partenaire/{idPartenaire}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<Offre>> getByPartenaire(@PathVariable("idPartenaire") String idPartenaire) {
-        return ResponseEntity.ok(offreService.getByPartenaire(idPartenaire));
+    public ResponseEntity<List<OffreAvantage>> getByPartenaire(@PathVariable("idPartenaire") String idPartenaire) {
+        return ResponseEntity.ok(offreAvantageService.getByPartenaire(idPartenaire));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Offre> creer(@RequestBody Offre offre) {
+    public ResponseEntity<OffreAvantage> creer(@RequestBody OffreAvantage offreAvantage) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(offreService.creerOffre(offre));
+                .body(offreAvantageService.creerOffreAvantage(offreAvantage));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Offre> modifier(
+    public ResponseEntity<OffreAvantage> modifier(
             @PathVariable("id") String id,
-            @RequestBody Offre offre) {
-        return ResponseEntity.ok(offreService.modifierOffre(id, offre));
+            @RequestBody OffreAvantage offreAvantage) {
+        return ResponseEntity.ok(offreAvantageService.modifierOffreAvantage(id, offreAvantage));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> supprimer(@PathVariable("id") String id) {
-        offreService.supprimerOffre(id);
+        offreAvantageService.supprimerOffreAvantage(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/{id}/toggle-statut")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Offre> toggleStatut(@PathVariable("id") String id) {
-        return ResponseEntity.ok(offreService.toggleStatut(id));
+    public ResponseEntity<OffreAvantage> toggleStatut(@PathVariable("id") String id) {
+        return ResponseEntity.ok(offreAvantageService.toggleStatut(id));
     }
 }

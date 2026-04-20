@@ -29,7 +29,7 @@ public class StatAvantageController {
 
     @GetMapping("/top-offres")
     @PreAuthorize("hasRole('ADMIN')")
-    public List<StatTopOffreDto> getTopOffres() {
+    public List<StatTopOffreAvantageDto> getTopOffres() {
         return statAvantageService.getTop5Offres();
     }
 

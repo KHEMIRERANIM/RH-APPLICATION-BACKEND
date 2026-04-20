@@ -47,4 +47,16 @@ public class NotificationServiceImpl implements NotificationService {
     public long getNbNonLues(String idUser) {
         return notificationRepository.countByIdUserAndLuFalse(idUser);
     }
+
+    @Override
+    public void supprimerNotification(String idNotification, String idUser) {
+        Notification notification = notificationRepository.findById(idNotification)
+                .orElseThrow(() -> new RuntimeException("Notification introuvable"));
+        
+        if (!notification.getIdUser().equals(idUser)) {
+            throw new RuntimeException("Non autorisé");
+        }
+        
+        notificationRepository.delete(notification);
+    }
 }

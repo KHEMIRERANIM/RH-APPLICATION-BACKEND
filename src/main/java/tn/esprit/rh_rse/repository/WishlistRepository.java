@@ -13,9 +13,9 @@ public interface WishlistRepository extends MongoRepository<Wishlist, String> {
     /** tous les favoris d'un utilisateur */
     List<Wishlist> findByIdUser(String idUser);
 
-    Optional<Wishlist> findByIdUserAndIdOffre(String idUser, String idOffre);
+    Optional<Wishlist> findByIdUserAndIdOffreAvantage(String idUser, String idOffreAvantage);
 
-    void deleteByIdUserAndIdOffre(String idUser, String idOffre);
+    void deleteByIdUserAndIdOffreAvantage(String idUser, String idOffreAvantage);
 
-    boolean existsByIdUserAndIdOffre(String idUser, String idOffre);
+    boolean existsByIdUserAndIdOffreAvantage(String idUser, String idOffreAvantage);
 }

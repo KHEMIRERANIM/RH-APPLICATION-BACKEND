@@ -27,7 +27,7 @@ public class DetailsHotel {
     private Integer nombreNuits;
 
     /**
-     * Formules pension disponibles pour cette offre.
+     * Formules pension disponibles pour cette offreAvantage.
      * Valeurs possibles : "PD" (Petit Déjeuner), "DP" (Demi Pension), "PC" (Pension Complète)
      */
     private List<String> formulesDisponibles;

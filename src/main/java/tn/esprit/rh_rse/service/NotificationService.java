@@ -9,4 +9,5 @@ public interface NotificationService {
     Notification marquerCommeLu(String idNotification, String idUser);
     void marquerToutCommeLu(String idUser);
     long getNbNonLues(String idUser);
+    void supprimerNotification(String idNotification, String idUser);
 }

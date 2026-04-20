@@ -8,16 +8,16 @@ import java.time.LocalDate;
 public interface AvantageReservationService {
 
     /** Réservation standard (VOYAGE / FESTIVAL) */
-    AvantageReservation reserverOuModifier(String idUser, String idOffre, Integer nbPersonnes);
+    AvantageReservation reserverOuModifier(String idUser, String idOffreAvantage, Integer nbPersonnes);
 
     /** Réservation hôtelière avec adultes, enfants et formule pension */
-    AvantageReservation reserverHotel(String idUser, String idOffre,
+    AvantageReservation reserverHotel(String idUser, String idOffreAvantage,
                               Integer nbAdultes, Integer nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut);
 
     AvantageReservation annuler(String idUser, String idReservation);
     List<AvantageReservation> getMesReservations(String idUser);
     List<AvantageReservation> getAllReservations();
-    List<AvantageReservation> getByOffre(String idOffre);
+    List<AvantageReservation> getByOffreAvantage(String idOffreAvantage);
     void viderAnnulees(String idUser);
-    AvantageReservation creerReservationHotel(String idUser, String idOffre, Integer nbPersonnesChoisi);
+    AvantageReservation creerReservationHotel(String idUser, String idOffreAvantage, Integer nbPersonnesChoisi);
 }

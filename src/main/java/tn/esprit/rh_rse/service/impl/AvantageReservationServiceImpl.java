@@ -3,13 +3,13 @@ package tn.esprit.rh_rse.service.impl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.entity.DetailsHotel;
-import tn.esprit.rh_rse.entity.Offre;
+import tn.esprit.rh_rse.entity.OffreAvantage;
 import tn.esprit.rh_rse.entity.AvantageReservation;
 import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
-import tn.esprit.rh_rse.exception.OffreNotFoundException;
+import tn.esprit.rh_rse.exception.OffreAvantageNotFoundException;
 import tn.esprit.rh_rse.exception.PlacesIndisponiblesException;
-import tn.esprit.rh_rse.repository.OffreRepository;
+import tn.esprit.rh_rse.repository.OffreAvantageRepository;
 import tn.esprit.rh_rse.repository.AvantageReservationRepository;
 import tn.esprit.rh_rse.repository.UserRepository;
 import tn.esprit.rh_rse.service.EmailService;
@@ -26,7 +26,7 @@ import java.util.Optional;
 public class AvantageReservationServiceImpl implements AvantageReservationService {
 
     private final AvantageReservationRepository reservationRepository;
-    private final OffreRepository       offreRepository;
+    private final OffreAvantageRepository       offreAvantageRepository;
     private final UserRepository        userRepository;
     private final PdfGenerationService  pdfGenerationService;
     private final EmailService          emailService;
@@ -36,52 +36,52 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public AvantageReservation reserverOuModifier(String idUser, String idOffre, Integer nbPersonnes) {
-        Offre offre = offreRepository.findById(idOffre)
-                .orElseThrow(() -> new OffreNotFoundException(idOffre));
+    public AvantageReservation reserverOuModifier(String idUser, String idOffreAvantage, Integer nbPersonnes) {
+        OffreAvantage offreAvantage = offreAvantageRepository.findById(idOffreAvantage)
+                .orElseThrow(() -> new OffreAvantageNotFoundException(idOffreAvantage));
 
         Optional<AvantageReservation> existante = reservationRepository
-                .findByIdUserAndIdOffreAndStatut(idUser, idOffre, StatutReservation.CONFIRMEE);
+                .findByIdUserAndIdOffreAvantageAndStatut(idUser, idOffreAvantage, StatutReservation.CONFIRMEE);
 
         if (existante.isPresent()) {
-            return modifierReservationStandard(existante.get(), offre, nbPersonnes);
+            return modifierReservationStandard(existante.get(), offreAvantage, nbPersonnes);
         }
-        return creerReservationStandard(idUser, offre, nbPersonnes);
+        return creerReservationStandard(idUser, offreAvantage, nbPersonnes);
     }
 
-    private AvantageReservation creerReservationStandard(String idUser, Offre offre, int nbPersonnes) {
-        if (offre.getNbPlacesDispo() < nbPersonnes) {
-            throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
+    private AvantageReservation creerReservationStandard(String idUser, OffreAvantage offreAvantage, int nbPersonnes) {
+        if (offreAvantage.getNbPlacesDispo() < nbPersonnes) {
+            throw new PlacesIndisponiblesException(offreAvantage.getNbPlacesDispo());
         }
 
-        offre.setNbPlacesDispo(offre.getNbPlacesDispo() - nbPersonnes);
-        offreRepository.save(offre);
+        offreAvantage.setNbPlacesDispo(offreAvantage.getNbPlacesDispo() - nbPersonnes);
+        offreAvantageRepository.save(offreAvantage);
 
         AvantageReservation reservation = AvantageReservation.builder()
                 .idUser(idUser)
-                .idOffre(offre.getId())
+                .idOffreAvantage(offreAvantage.getId())
                 .nbPersonnes(nbPersonnes)
-                .prixUnitaire(offre.getPrixConvention())
-                .prixTotal(offre.getPrixConvention() * nbPersonnes)
+                .prixUnitaire(offreAvantage.getPrixConvention())
+                .prixTotal(offreAvantage.getPrixConvention() * nbPersonnes)
                 .statut(StatutReservation.CONFIRMEE)
                 .dateReservation(LocalDateTime.now())
                 .build();
 
         AvantageReservation saved = reservationRepository.save(reservation);
-        _envoyerEmail(saved, offre, idUser);
+        _envoyerEmail(saved, offreAvantage, idUser);
         return saved;
     }
 
-    private AvantageReservation modifierReservationStandard(AvantageReservation reservation, Offre offre, int nouveauNb) {
+    private AvantageReservation modifierReservationStandard(AvantageReservation reservation, OffreAvantage offreAvantage, int nouveauNb) {
         int diff = nouveauNb - reservation.getNbPersonnes();
-        if (diff > 0 && offre.getNbPlacesDispo() < diff) {
-            throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
+        if (diff > 0 && offreAvantage.getNbPlacesDispo() < diff) {
+            throw new PlacesIndisponiblesException(offreAvantage.getNbPlacesDispo());
         }
-        offre.setNbPlacesDispo(offre.getNbPlacesDispo() - diff);
-        offreRepository.save(offre);
+        offreAvantage.setNbPlacesDispo(offreAvantage.getNbPlacesDispo() - diff);
+        offreAvantageRepository.save(offreAvantage);
 
         reservation.setNbPersonnes(nouveauNb);
-        reservation.setPrixTotal(offre.getPrixConvention() * nouveauNb);
+        reservation.setPrixTotal(offreAvantage.getPrixConvention() * nouveauNb);
         return reservationRepository.save(reservation);
     }
 
@@ -90,13 +90,13 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
     // ══════════════════════════════════════════════════════════════════
 
     @Override
-    public AvantageReservation reserverHotel(String idUser, String idOffre,
+    public AvantageReservation reserverHotel(String idUser, String idOffreAvantage,
                                      Integer nbAdultes, Integer nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
-        Offre offre = offreRepository.findById(idOffre)
-                .orElseThrow(() -> new OffreNotFoundException(idOffre));
+        OffreAvantage offreAvantage = offreAvantageRepository.findById(idOffreAvantage)
+                .orElseThrow(() -> new OffreAvantageNotFoundException(idOffreAvantage));
 
-        if (offre.getDetailsHotel() == null) {
-            throw new RuntimeException("Cette offre n'est pas de type hôtelier");
+        if (offreAvantage.getDetailsHotel() == null) {
+            throw new RuntimeException("Cette offreAvantage n'est pas de type hôtelier");
         }
         
         if (checkIn == null || checkOut == null || checkIn.isAfter(checkOut) || checkIn.isEqual(checkOut)) {
@@ -109,76 +109,76 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
         }
 
         Optional<AvantageReservation> existante = reservationRepository
-                .findByIdUserAndIdOffreAndStatut(idUser, idOffre, StatutReservation.CONFIRMEE);
+                .findByIdUserAndIdOffreAvantageAndStatut(idUser, idOffreAvantage, StatutReservation.CONFIRMEE);
 
         if (existante.isPresent()) {
-            return modifierReservationHotel(existante.get(), offre, nbAdultes, nbEnfants, formule, checkIn, checkOut);
+            return modifierReservationHotel(existante.get(), offreAvantage, nbAdultes, nbEnfants, formule, checkIn, checkOut);
         }
-        return creerReservationHotel(idUser, offre, nbAdultes, nbEnfants, formule, checkIn, checkOut);
+        return creerReservationHotel(idUser, offreAvantage, nbAdultes, nbEnfants, formule, checkIn, checkOut);
     }
 
-    private AvantageReservation creerReservationHotel(String idUser, Offre offre,
+    private AvantageReservation creerReservationHotel(String idUser, OffreAvantage offreAvantage,
                                                int nbAdultes, int nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
         int nbTotal = nbAdultes + nbEnfants;
-        if (offre.getNbPlacesDispo() < nbTotal) {
-            throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
+        if (offreAvantage.getNbPlacesDispo() < nbTotal) {
+            throw new PlacesIndisponiblesException(offreAvantage.getNbPlacesDispo());
         }
 
         int nuits = (int) java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
-        int minNuits = offre.getDetailsHotel().getNombreNuits() != null ? offre.getDetailsHotel().getNombreNuits() : 1;
+        int minNuits = offreAvantage.getDetailsHotel().getNombreNuits() != null ? offreAvantage.getDetailsHotel().getNombreNuits() : 1;
         if (nuits < minNuits) {
             throw new RuntimeException("La durée minimale du séjour pour cet hôtel est de " + minNuits + " nuit(s).");
         }
-        double prix = _calculerPrixHotel(offre.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
+        double prix = _calculerPrixHotel(offreAvantage.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
 
-        offre.setNbPlacesDispo(offre.getNbPlacesDispo() - nbTotal);
-        offreRepository.save(offre);
+        offreAvantage.setNbPlacesDispo(offreAvantage.getNbPlacesDispo() - nbTotal);
+        offreAvantageRepository.save(offreAvantage);
 
         AvantageReservation reservation = AvantageReservation.builder()
                 .idUser(idUser)
-                .idOffre(offre.getId())
+                .idOffreAvantage(offreAvantage.getId())
                 .nbPersonnes(nbTotal)
                 .nbAdultes(nbAdultes)
                 .nbEnfants(nbEnfants)
                 .formule(formule)
                 .checkIn(checkIn)
                 .checkOut(checkOut)
-                .prixUnitaire(offre.getDetailsHotel().getPrixAdulte())
+                .prixUnitaire(offreAvantage.getDetailsHotel().getPrixAdulte())
                 .prixTotal(prix)
                 .statut(StatutReservation.CONFIRMEE)
                 .dateReservation(LocalDateTime.now())
                 .build();
 
         AvantageReservation saved = reservationRepository.save(reservation);
-        _envoyerEmail(saved, offre, idUser);
+        _envoyerEmail(saved, offreAvantage, idUser);
         return saved;
     }
 
     @Override
-    public AvantageReservation creerReservationHotel(String idUser, String idOffre, Integer nbPersonnesChoisi) {
+    public AvantageReservation creerReservationHotel(String idUser, String idOffreAvantage, Integer nbPersonnesChoisi) {
         // Fallback or implementation of method mistakenly added to service interface, ignoring.
         return null;
     }
 
-    private AvantageReservation modifierReservationHotel(AvantageReservation reservation, Offre offre,
+    private AvantageReservation modifierReservationHotel(AvantageReservation reservation, OffreAvantage offreAvantage,
                                                   int nbAdultes, int nbEnfants, String formule, LocalDate checkIn, LocalDate checkOut) {
         int ancienNb = reservation.getNbPersonnes();
         int nouveauNb = nbAdultes + nbEnfants;
         int diff = nouveauNb - ancienNb;
 
-        if (diff > 0 && offre.getNbPlacesDispo() < diff) {
-            throw new PlacesIndisponiblesException(offre.getNbPlacesDispo());
+        if (diff > 0 && offreAvantage.getNbPlacesDispo() < diff) {
+            throw new PlacesIndisponiblesException(offreAvantage.getNbPlacesDispo());
         }
 
         int nuits = (int) java.time.temporal.ChronoUnit.DAYS.between(checkIn, checkOut);
-        int minNuits = offre.getDetailsHotel().getNombreNuits() != null ? offre.getDetailsHotel().getNombreNuits() : 1;
+        int minNuits = offreAvantage.getDetailsHotel().getNombreNuits() != null ? offreAvantage.getDetailsHotel().getNombreNuits() : 1;
         if (nuits < minNuits) {
             throw new RuntimeException("La durée minimale du séjour pour cet hôtel est de " + minNuits + " nuit(s).");
         }
-        double prix = _calculerPrixHotel(offre.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
+        double prix = _calculerPrixHotel(offreAvantage.getDetailsHotel(), nbAdultes, nbEnfants, formule, nuits);
 
-        offre.setNbPlacesDispo(offre.getNbPlacesDispo() - diff);
-        offreRepository.save(offre);
+        offreAvantage.setNbPlacesDispo(offreAvantage.getNbPlacesDispo() - diff);
+        offreAvantageRepository.save(offreAvantage);
 
         reservation.setNbPersonnes(nouveauNb);
         reservation.setNbAdultes(nbAdultes);
@@ -224,11 +224,11 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
             throw new RuntimeException("Cette réservation est déjà annulée");
         }
 
-        Offre offre = offreRepository.findById(reservation.getIdOffre())
-                .orElseThrow(() -> new OffreNotFoundException(reservation.getIdOffre()));
+        OffreAvantage offreAvantage = offreAvantageRepository.findById(reservation.getIdOffreAvantage())
+                .orElseThrow(() -> new OffreAvantageNotFoundException(reservation.getIdOffreAvantage()));
 
-        offre.setNbPlacesDispo(offre.getNbPlacesDispo() + reservation.getNbPersonnes());
-        offreRepository.save(offre);
+        offreAvantage.setNbPlacesDispo(offreAvantage.getNbPlacesDispo() + reservation.getNbPersonnes());
+        offreAvantageRepository.save(offreAvantage);
 
         reservation.setStatut(StatutReservation.ANNULEE);
         reservation.setDateAnnulation(LocalDateTime.now());
@@ -250,8 +250,8 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
     }
 
     @Override
-    public List<AvantageReservation> getByOffre(String idOffre) {
-        return reservationRepository.findByIdOffre(idOffre);
+    public List<AvantageReservation> getByOffreAvantage(String idOffreAvantage) {
+        return reservationRepository.findByIdOffreAvantage(idOffreAvantage);
     }
 
     @Override
@@ -263,15 +263,15 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
     // HELPER PRIVÉ : envoi email/PDF
     // ══════════════════════════════════════════════════════════════════
 
-    private void _envoyerEmail(AvantageReservation saved, Offre offre, String idUser) {
+    private void _envoyerEmail(AvantageReservation saved, OffreAvantage offreAvantage, String idUser) {
         try {
             User user = userRepository.findById(idUser).orElse(null);
             if (user != null && user.getEmail() != null) {
-                byte[] pdfBytes = pdfGenerationService.generateReservationPdf(saved, offre, user);
+                byte[] pdfBytes = pdfGenerationService.generateReservationPdf(saved, offreAvantage, user);
                 emailService.sendReservationConfirmation(
                         user.getEmail(),
                         user.getPrenom() + " " + user.getNom(),
-                        offre.getTitre(),
+                        offreAvantage.getTitre(),
                         pdfBytes
                 );
             }

@@ -11,10 +11,10 @@ public interface AvantageReservationRepository extends MongoRepository<AvantageR
 
     List<AvantageReservation> findByIdUser(String idUser);
 
-    List<AvantageReservation> findByIdOffre(String idOffre);
+    List<AvantageReservation> findByIdOffreAvantage(String idOffreAvantage);
 
-    Optional<AvantageReservation> findByIdUserAndIdOffreAndStatut(
-            String idUser, String idOffre, StatutReservation statut);
+    Optional<AvantageReservation> findByIdUserAndIdOffreAvantageAndStatut(
+            String idUser, String idOffreAvantage, StatutReservation statut);
 
     void deleteByIdUserAndStatut(String idUser, StatutReservation statut);
 }

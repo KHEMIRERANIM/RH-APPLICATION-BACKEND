@@ -21,9 +21,9 @@ public class Notification {
 
     private TypeNotification type;
 
-    private String idOffre;
+    private String idOffreAvantage;
 
-    private String titreOffre;
+    private String titreOffreAvantage;
 
     private String message;
 

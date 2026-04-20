@@ -22,19 +22,19 @@ public class WishlistController {
     @PostMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<Wishlist> ajouterFavori(
-            @RequestParam("idOffre") String idOffre,
+            @RequestParam("idOffreAvantage") String idOffreAvantage,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
-        return ResponseEntity.ok(wishlistService.ajouterFavori(idUser, idOffre));
+        return ResponseEntity.ok(wishlistService.ajouterFavori(idUser, idOffreAvantage));
     }
 
-    @DeleteMapping("/{idOffre}")
+    @DeleteMapping("/{idOffreAvantage}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<Void> retirerFavori(
-            @PathVariable("idOffre") String idOffre,
+            @PathVariable("idOffreAvantage") String idOffreAvantage,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
-        wishlistService.retirerFavori(idUser, idOffre);
+        wishlistService.retirerFavori(idUser, idOffreAvantage);
         return ResponseEntity.noContent().build();
     }
 
@@ -45,13 +45,13 @@ public class WishlistController {
         return ResponseEntity.ok(wishlistService.getMesFavoris(idUser));
     }
 
-    @GetMapping("/check/{idOffre}")
+    @GetMapping("/check/{idOffreAvantage}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<Boolean> estEnFavori(
-            @PathVariable("idOffre") String idOffre,
+            @PathVariable("idOffreAvantage") String idOffreAvantage,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
-        return ResponseEntity.ok(wishlistService.estEnFavori(idUser, idOffre));
+        return ResponseEntity.ok(wishlistService.estEnFavori(idUser, idOffreAvantage));
     }
 
     private String extraireIdUser(HttpServletRequest request) {

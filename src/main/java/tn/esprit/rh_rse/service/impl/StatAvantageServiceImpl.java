@@ -10,7 +10,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.dto.response.StatAvantageDTOs.*;
 import tn.esprit.rh_rse.entity.AvantageReservation;
-import tn.esprit.rh_rse.entity.Offre;
+import tn.esprit.rh_rse.entity.OffreAvantage;
 import tn.esprit.rh_rse.entity.Partenaire;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.service.StatAvantageService;
@@ -42,7 +42,7 @@ public class StatAvantageServiceImpl implements StatAvantageService {
 
         long offresActives = mongoTemplate.count(
                 new Query(Criteria.where("statut").is("ACTIVE")),
-                Offre.class
+                OffreAvantage.class
         );
 
         long partenairesActifs = mongoTemplate.count(
@@ -60,7 +60,7 @@ public class StatAvantageServiceImpl implements StatAvantageService {
 
     @Override
     public List<StatCategorieDto> getStatParCategorie() {
-        // En utilisant String pour 'idOffre' on doit s'assurer que c'est bien relié à _id.
+        // En utilisant String pour 'idOffreAvantage' on doit s'assurer que c'est bien relié à _id.
         // Puisque la DB MongoDB peut stocker '_id' en tant que ObjectId, une agrégation avec $lookup depuis
         // un champ String peut être complexe sans conversion ObjectId spécifique à Spring.
         // L'alternative propre avec MongoTemplate c'est d'utiliser l'agrégation, mais avec l'opérateur $toObjectId
@@ -68,8 +68,8 @@ public class StatAvantageServiceImpl implements StatAvantageService {
         // l'utilisateur veut utiliser Aggregation.
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("statut").is(StatutReservation.CONFIRMEE)),
-                Aggregation.addFields().addField("idOffreObj").withValueOfExpression("{ $toObjectId: '$idOffre' }").build(),
-                Aggregation.lookup("offres", "idOffreObj", "_id", "offre_docs"),
+                Aggregation.addFields().addField("idOffreAvantageObj").withValueOfExpression("{ $toObjectId: '$idOffreAvantage' }").build(),
+                Aggregation.lookup("offres", "idOffreAvantageObj", "_id", "offre_docs"),
                 Aggregation.unwind("offre_docs"),
                 Aggregation.group("offre_docs.categorie").count().as("count"),
                 Aggregation.project("count").and("_id").as("categorie")
@@ -87,25 +87,25 @@ public class StatAvantageServiceImpl implements StatAvantageService {
     }
 
     @Override
-    public List<StatTopOffreDto> getTop5Offres() {
+    public List<StatTopOffreAvantageDto> getTop5Offres() {
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("statut").is(StatutReservation.CONFIRMEE)),
-                Aggregation.group("idOffre").count().as("count"),
+                Aggregation.group("idOffreAvantage").count().as("count"),
                 Aggregation.sort(Sort.Direction.DESC, "count"),
                 Aggregation.limit(5),
-                Aggregation.project("count").and("_id").as("idOffre")
+                Aggregation.project("count").and("_id").as("idOffreAvantage")
         );
 
-        AggregationResults<StatTopOffreDto> results = mongoTemplate.aggregate(aggregation, "avantage_reservation", StatTopOffreDto.class);
-        List<StatTopOffreDto> stats = results.getMappedResults();
+        AggregationResults<StatTopOffreAvantageDto> results = mongoTemplate.aggregate(aggregation, "avantage_reservation", StatTopOffreAvantageDto.class);
+        List<StatTopOffreAvantageDto> stats = results.getMappedResults();
 
         // Récupérer les titres des offres
-        List<String> ids = stats.stream().map(StatTopOffreDto::getIdOffre).collect(Collectors.toList());
-        List<Offre> offres = mongoTemplate.find(new Query(Criteria.where("id").in(ids)), Offre.class);
-        Map<String, String> titreMap = offres.stream().collect(Collectors.toMap(Offre::getId, Offre::getTitre));
+        List<String> ids = stats.stream().map(StatTopOffreAvantageDto::getIdOffreAvantage).collect(Collectors.toList());
+        List<OffreAvantage> offres = mongoTemplate.find(new Query(Criteria.where("id").in(ids)), OffreAvantage.class);
+        Map<String, String> titreMap = offres.stream().collect(Collectors.toMap(OffreAvantage::getId, OffreAvantage::getTitre));
 
-        for (StatTopOffreDto dto : stats) {
-            dto.setTitreOffre(titreMap.getOrDefault(dto.getIdOffre(), "Offre inconnue"));
+        for (StatTopOffreAvantageDto dto : stats) {
+            dto.setTitreOffreAvantage(titreMap.getOrDefault(dto.getIdOffreAvantage(), "OffreAvantage inconnue"));
         }
 
         return stats;
@@ -159,3 +159,4 @@ public class StatAvantageServiceImpl implements StatAvantageService {
         return stats;
     }
 }
+

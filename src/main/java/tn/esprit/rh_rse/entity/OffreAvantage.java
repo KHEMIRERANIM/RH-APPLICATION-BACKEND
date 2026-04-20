@@ -3,17 +3,17 @@ package tn.esprit.rh_rse.entity;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import tn.esprit.rh_rse.entity.enums.CategorieOffre;
+import tn.esprit.rh_rse.entity.enums.CategorieOffreAvantage;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-@Document(collection = "offres")
+@Document(collection = "offre_avantages")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Offre {
+public class OffreAvantage {
 
     @Id
     private String id;
@@ -21,7 +21,7 @@ public class Offre {
     private String idPartenaire;
     private String titre;
     private String description;
-    private CategorieOffre categorie;
+    private CategorieOffreAvantage categorie;
 
     /** Prix réel (barré) — toujours présent pour toutes les catégories */
     private Double prixReel;

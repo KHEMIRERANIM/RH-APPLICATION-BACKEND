@@ -7,9 +7,8 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-
 @Document(collection = "wishlist")
-@CompoundIndex(def = "{'idUser': 1, 'idOffre': 1}", unique = true)
+@CompoundIndex(def = "{'idUser': 1, 'idOffreAvantage': 1}", unique = true)
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -21,7 +20,7 @@ public class Wishlist {
 
     private String idUser;
 
-    private String idOffre;
+    private String idOffreAvantage;
 
     private LocalDateTime dateAjout;
 
