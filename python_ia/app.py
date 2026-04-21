@@ -9,6 +9,7 @@ import re
 import io
 import urllib.request
 from PyPDF2 import PdfReader
+from google import genai
 
 # --- LOADING KNOWLEDGE BASE ---
 BASE_DIR = os.path.dirname(__file__)
@@ -28,6 +29,10 @@ AMBASSADEURS = load_json('ambassadeurs.json')
 app = Flask(__name__)
 CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
 MAX_CV_BYTES = 5 * 1024 * 1024
+
+# --- CONFIGURATION GEMINI AI ---
+GEMINI_API_KEY = "AIzaSyCo8bCcvfZKi_DKCgKZNGqTS43UpQBNzMU"
+client = genai.Client(api_key=GEMINI_API_KEY)
 
 # VRAI DATASET (CORPUS D'ENTRAINEMENT) : Ce que cherche l'entreprise
 IDEAL_BUSINESS_CORPUS = [
@@ -516,6 +521,78 @@ def chat_coach():
         print(f"❌ ERREUR CRITIQUE CHATBOT: {str(e)}")
         return jsonify({"reply": "Désolé, j'ai rencontré une erreur interne. Réessayez dans un instant."}), 500
 
+# --- NEW ENDPOINT: ADVANCED AI BIAS DETECTION ---
+@app.route('/analyze-bias-ai', methods=['POST'])
+def analyze_bias_ai():
+    try:
+        data = request.json
+        description = data.get('description', '')
+        
+        if not description or len(description) < 10:
+            return jsonify({"score": 100, "suggestions": []})
+
+        prompt = f"""
+        En tant qu'expert en Inclusion et Diversité (RSE) dans le recrutement, analyse la description de poste suivante pour détecter des biais subtils (genre, âge, culture, origine, etc.).
+        
+        Description : "{description}"
+        
+        Réponds uniquement en format JSON avec cette structure :
+        {{
+            "inclusionScore": (nombre entre 0 et 100),
+            "biasesFound": ["liste de biais détectés ou expressions problématiques"],
+            "suggestions": [
+                {{
+                    "problem": "explication du biais",
+                    "suggestion": "version plus inclusive"
+                }}
+            ],
+            "conclusion": "un bref résumé encourageant"
+        }}
+        """
+
+        # Liste de modèles à tester par ordre de priorité (pour contourner les limites de quota)
+        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash']
+        response = None
+        last_error = ""
+
+        for model_id in models_to_try:
+            try:
+                print(f"🔄 Tentative d'analyse avec le modèle : {model_id}...")
+                response = client.models.generate_content(
+                    model=model_id,
+                    contents=prompt
+                )
+                if response:
+                    print(f"✅ Succès avec le modèle : {model_id}")
+                    break
+            except Exception as e:
+                last_error = str(e)
+                print(f"⚠️ Échec avec {model_id} (Quota ou indisponibilité)")
+                continue
+
+        if not response:
+            return jsonify({"error": f"Tous les modèles Gemini sont saturés ou restreints pour votre clé. Erreur : {last_error}"}), 500
+
+        # Extraire le JSON de la réponse (pour éviter les backticks ```json ... ```)
+        text_resp = response.text
+        json_match = re.search(r'\{.*\}', text_resp, re.DOTALL)
+        if json_match:
+            result = json.loads(json_match.group())
+            return jsonify(result)
+        else:
+            return jsonify({"error": "Format IA invalide"}), 500
+
+    except Exception as e:
+        print(f"❌ ERREUR BIAS AI: {e}")
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
+    try:
+        print("🔍 Modèles disponibles pour votre clé :")
+        for m in client.models.list():
+            print(f"  - {m.name}")
+    except Exception as e:
+        print(f"⚠️ Impossible de lister les modèles : {e}")
+
     print("🧠 Modèle NLP et Intelligence Coach RSE activés sur le port 5000...")
     app.run(port=5000, debug=True)
