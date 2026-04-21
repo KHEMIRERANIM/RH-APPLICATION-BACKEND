@@ -46,6 +46,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/careers/**").permitAll()
+
+                        // ✅ Specific rules FIRST
+                        .requestMatchers(HttpMethod.GET, "/api/mobility/*/analyze").permitAll()
+
+                        // ✅ General rules AFTER
                         .requestMatchers("/api/mobility/**").authenticated()
                         .requestMatchers("/api/evolution_plans/**").authenticated()
                         .requestMatchers("/api/career-plans/**").authenticated()
