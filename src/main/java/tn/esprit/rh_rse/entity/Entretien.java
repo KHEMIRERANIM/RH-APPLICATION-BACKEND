@@ -31,6 +31,10 @@ public class Entretien {
 
     private StatutEntretien statut;
 
+    // Candidat-side confirmation (for candidate calendar visibility)
+    private boolean confirmeParCandidat;
+    private LocalDateTime dateConfirmationCandidat;
+
     private String feedbackGlobal;
     private Integer noteGlobale;
     private List<String> pointsForts;

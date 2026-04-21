@@ -43,6 +43,13 @@ public class EntretienController {
         return ResponseEntity.ok(entretienService.getEntretiensParRecruteur(recruteurId));
     }
 
+    @GetMapping("/candidat/{candidatId}")
+    public ResponseEntity<List<EntretienResponse>> getEntretiensParCandidat(
+            @PathVariable String candidatId,
+            @RequestParam(defaultValue = "true") boolean confirmedOnly) {
+        return ResponseEntity.ok(entretienService.getEntretiensParCandidat(candidatId, confirmedOnly));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<EntretienResponse> modifierEntretien(
             @PathVariable String id,
@@ -67,5 +74,10 @@ public class EntretienController {
     public ResponseEntity<Void> marquerRealise(@PathVariable String id) {
         entretienService.marquerRealise(id);
         return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/{id}/confirmer")
+    public ResponseEntity<EntretienResponse> confirmerPresenceCandidat(@PathVariable String id) {
+        return ResponseEntity.ok(entretienService.confirmerPresenceCandidat(id));
     }
 }

@@ -12,4 +12,6 @@ public interface EntretienRepository extends MongoRepository<Entretien, String> 
     List<Entretien> findByCandidatureId(String candidatureId);
 
     List<Entretien> findByRecruteurId(String recruteurId);
+
+    List<Entretien> findByCandidatureIdIn(List<String> candidatureIds);
 }

@@ -20,6 +20,8 @@ public class EntretienResponse {
     private String lieu;
     private String lienVisio;
     private StatutEntretien statut;
+    private boolean confirmeParCandidat;
+    private LocalDateTime dateConfirmationCandidat;
     private String feedbackGlobal;
     private Integer noteGlobale;
     private List<String> pointsForts;

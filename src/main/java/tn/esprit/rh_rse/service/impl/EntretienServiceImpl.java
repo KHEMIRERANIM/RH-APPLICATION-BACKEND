@@ -90,6 +90,8 @@ public class EntretienServiceImpl implements EntretienService {
                 .lieu(request.getLieu())
                 .lienVisio(lienVisio)  // ← Lien Meet généré
                 .statut(StatutEntretien.PLANIFIE)
+                .confirmeParCandidat(false)
+                .dateConfirmationCandidat(null)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
                 .build();
@@ -158,6 +160,24 @@ public class EntretienServiceImpl implements EntretienService {
     public List<EntretienResponse> getEntretiensParRecruteur(String recruteurId) {
         return entretienRepository.findByRecruteurId(recruteurId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<EntretienResponse> getEntretiensParCandidat(String candidatId, boolean confirmedOnly) {
+        List<String> candidatureIds = candidatureRepository.findByCandidatId(candidatId)
+                .stream()
+                .map(Candidature::getId)
+                .collect(Collectors.toList());
+
+        if (candidatureIds.isEmpty()) {
+            return List.of();
+        }
+
+        return entretienRepository.findByCandidatureIdIn(candidatureIds)
+                .stream()
+                .filter(e -> !confirmedOnly || e.isConfirmeParCandidat())
+                .map(this::toResponse)
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -249,6 +269,17 @@ public class EntretienServiceImpl implements EntretienService {
         entretienRepository.save(e);
     }
 
+    @Override
+    public EntretienResponse confirmerPresenceCandidat(String entretienId) {
+        Entretien e = entretienRepository.findById(entretienId)
+                .orElseThrow(() -> new RecrutementNotFoundException("Entretien introuvable : " + entretienId));
+
+        e.setConfirmeParCandidat(true);
+        e.setDateConfirmationCandidat(LocalDateTime.now());
+        e.setUpdatedAt(LocalDateTime.now());
+        return toResponse(entretienRepository.save(e));
+    }
+
     private EntretienResponse toResponse(Entretien e) {
         return EntretienResponse.builder()
                 .id(e.getId())
@@ -260,6 +291,8 @@ public class EntretienServiceImpl implements EntretienService {
                 .lieu(e.getLieu())
                 .lienVisio(e.getLienVisio())
                 .statut(e.getStatut())
+                .confirmeParCandidat(e.isConfirmeParCandidat())
+                .dateConfirmationCandidat(e.getDateConfirmationCandidat())
                 .feedbackGlobal(e.getFeedbackGlobal())
                 .noteGlobale(e.getNoteGlobale())
                 .pointsForts(e.getPointsForts())
