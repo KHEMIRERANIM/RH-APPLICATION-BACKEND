@@ -277,7 +277,7 @@ public class CandidatureServiceImpl implements CandidatureService {
                 contentStream.newLine();
                 contentStream.showText("1. Poste : " + o.getTitre());
                 contentStream.newLine();
-                contentStream.showText("2. Lieu de travail : " + o.getLieu());
+                contentStream.showText("2. Lieu de travail : " + o.getLocalisation());
                 contentStream.newLine();
                 contentStream.showText("3. Type de contrat : " + o.getTypeContrat());
                 contentStream.newLine();

@@ -326,12 +326,22 @@ def chat_coach():
         best_intent_idx = intent_scores.argmax()
         intent = intent_labels[best_intent_idx]
         
-        # --- OVERRIDE MANUEL (PRIORITÉ CONTACT & EQUIPE) ---
+        # --- OVERRIDE MANUEL (PRIORITÉS) ---
         contact_triggers = ["contacter", "parler", "qui", "equipe", "insider", "collaborateur", "personne", "quelqu'un", "coordonnées", "mail"]
-        if any(trigger in user_message.lower() for trigger in contact_triggers) and ("offre" in user_message.lower() or "poste" in user_message.lower()):
+        job_triggers = ["offre", "poste", "job", "métier", "ingénieur", "ingenieur", "developpeur", "développeur", "manager", "directeur", "cherche"]
+        
+        msg_lower = user_message.lower()
+        best_score = intent_scores.max()
+        
+        if any(trigger in msg_lower for trigger in contact_triggers) and ("offre" in msg_lower or "poste" in msg_lower):
             intent = "equipe"
+            best_score = 1.0
+        elif any(trigger in msg_lower for trigger in job_triggers):
+            if intent != "equipe":
+                intent = "trouver_offre"
+                best_score = 1.0
             
-        print(f"Intent détecté: {intent} (Score: {intent_scores.max()})")
+        print(f"Intent détecté: {intent} (Score: {best_score})")
         
         empathic_prefix = ""
         sentiment = analyze_sentiment(user_message_raw)
@@ -354,7 +364,6 @@ def chat_coach():
                 reply = f"{empathic_prefix}Je sens que vous traversez un moment difficile. Chez RH_RSE, nous valorisons l'humain avant tout. Voulez-vous que je vous aide à décompresser ou à préparer une étape spécifique ?"
             return jsonify({"reply": reply})
 
-        best_score = intent_scores.max()
         # Seuil de déclenchement (0.1)
         if best_score < 0.1:
             # --- SEMANTIC KNOWLEDGE SEARCH (RAG LITE) ---
@@ -378,7 +387,6 @@ def chat_coach():
             else:
                 reply = empathic_prefix + "C'est une réflexion intéressante ! Toutefois, en tant que Coach RSE, je suis focalisé sur votre progression technique, nos valeurs d'entreprise et la préparation à l'entretien."
         else:
-            intent = intent_labels[best_intent_idx]
             if intent == "salutation":
                 reply = empathic_prefix + f"Bonjour {candidat_name} ! Je suis votre Coach Virtuel Anti-Biais. Félicitations pour votre profil pour : {offre_title}. Comment voulez-vous orienter notre préparation ?"
             elif intent == "amelioration":
@@ -407,7 +415,7 @@ def chat_coach():
                     else:
                         # Nettoyage et enrichissement du texte de recherche (Gestion synonymes IA)
                         user_skills_set = {s.lower() for s in extracted_skills}
-                        search_text = " ".join(extracted_skills).lower()
+                        search_text = (" ".join(extracted_skills) + " " + user_message).lower()
                         if "ia" in search_text or "ai" in search_text:
                             search_text += " intelligence artificielle artificial machine learning deep"
                         
@@ -428,6 +436,11 @@ def chat_coach():
                         
                         matched = [s for s in job_skills if any(u in s or s in u for u in user_skills_set)]
                         missing = [s for s in job_skills if not any(u in s or s in u for u in user_skills_set)]
+                        
+                        # Alignement du score avec le système principal de Recrutement Java (Base Compétences 80%)
+                        if job_skills:
+                            logic_score = int((len(matched) / len(job_skills)) * 80) + 10
+                            score_pct = max(score_pct, logic_score)
                         
                         reasoning = f"\n\n--- 🧠 **Analyse de l'Expert IA** ---\n"
                         if matched:
