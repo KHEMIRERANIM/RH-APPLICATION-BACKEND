@@ -3,6 +3,9 @@ package tn.esprit.rh_rse.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
@@ -11,6 +14,7 @@ import tn.esprit.rh_rse.dto.request.ChangerStatutRequest;
 import tn.esprit.rh_rse.dto.response.CandidatureResponse;
 import tn.esprit.rh_rse.entity.Candidature;
 import tn.esprit.rh_rse.entity.Offre;
+import tn.esprit.rh_rse.entity.User;
 import tn.esprit.rh_rse.entity.enums.StatutCandidature;
 import tn.esprit.rh_rse.exception.RecrutementNotFoundException;
 import tn.esprit.rh_rse.repository.CandidatureRepository;
@@ -26,8 +30,10 @@ import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -237,14 +243,156 @@ public class CandidatureServiceImpl implements CandidatureService {
 
     @Override
     public byte[] genererContratPdf(String candidatureId) {
-        // Votre logique PDFBox existante ici
-        return new byte[0];
+        Candidature c = candidatureRepository.findById(candidatureId)
+                .orElseThrow(() -> new RecrutementNotFoundException("Candidature introuvable"));
+        Offre o = offreRepository.findById(c.getOffreId())
+                .orElseThrow(() -> new RecrutementNotFoundException("Offre introuvable"));
+        User user = userRepository.findById(c.getCandidatId())
+                .orElseThrow(() -> new RecrutementNotFoundException("Candidat introuvable"));
+
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 18);
+                contentStream.newLineAtOffset(50, 750);
+                contentStream.showText("CONTRAT DE TRAVAIL - " + o.getTitre());
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA, 12);
+                contentStream.setLeading(15f);
+                contentStream.newLineAtOffset(50, 700);
+
+                contentStream.showText("Entre l'entreprise RH_RSE et :");
+                contentStream.newLine();
+                contentStream.showText("M./Mme " + user.getNom() + " " + user.getPrenom());
+                contentStream.newLine();
+                contentStream.showText("Email : " + user.getEmail());
+                contentStream.newLine();
+                contentStream.newLine();
+                contentStream.showText("Il a été convenu ce qui suit :");
+                contentStream.newLine();
+                contentStream.showText("1. Poste : " + o.getTitre());
+                contentStream.newLine();
+                contentStream.showText("2. Lieu de travail : " + o.getLieu());
+                contentStream.newLine();
+                contentStream.showText("3. Type de contrat : " + o.getTypeContrat());
+                contentStream.newLine();
+                contentStream.newLine();
+                contentStream.showText("Fait à Tunis, le " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+                contentStream.endText();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
+            return baos.toByteArray();
+        } catch (IOException e) {
+            log.error("Erreur génération contrat PDF: {}", e.getMessage());
+            return new byte[0];
+        }
     }
 
     @Override
     public byte[] genererCoachTipsPdf(String tipsText) {
-        // Votre logique PDFBox existante ici
-        return new byte[0];
+        String cleanTips = cleanTextForPdf(tipsText);
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
+                // Header
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 22);
+                contentStream.setNonStrokingColor(63, 81, 181); // Indigo
+                contentStream.newLineAtOffset(50, 750);
+                contentStream.showText("Mes Conseils Career Coach IA");
+                contentStream.endText();
+
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA, 10);
+                contentStream.setNonStrokingColor(100, 100, 100);
+                contentStream.newLineAtOffset(50, 730);
+                contentStream.showText("Généré le " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                contentStream.endText();
+
+                // Separator
+                contentStream.setLineWidth(1f);
+                contentStream.moveTo(50, 715);
+                contentStream.lineTo(550, 715);
+                contentStream.stroke();
+
+                // Content
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA, 11);
+                contentStream.setNonStrokingColor(0, 0, 0);
+                contentStream.setLeading(18f);
+                contentStream.newLineAtOffset(50, 680);
+
+                String[] lines = cleanTips.split("\n");
+                for (String line : lines) {
+                    String sanitizedLine = line.trim();
+                    if (sanitizedLine.isEmpty()) {
+                        contentStream.newLine();
+                    } else {
+                        drawWrappedText(contentStream, sanitizedLine, 500, PDType1Font.HELVETICA, 11);
+                    }
+                }
+                contentStream.endText();
+                
+                // Footer
+                contentStream.beginText();
+                contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
+                contentStream.setNonStrokingColor(150, 150, 150);
+                contentStream.newLineAtOffset(220, 50);
+                contentStream.showText("© RH_RSE - Plateforme de Recrutement Innovante");
+                contentStream.endText();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("Erreur critique génération Tips PDF: {}", e.getMessage());
+            return new byte[0];
+        }
+    }
+
+    private String cleanTextForPdf(String text) {
+        if (text == null) return "";
+        // Supprime les emojis et caractères spéciaux non supportés par Helvetica standard
+        // On ne garde que les lettres (y compris accentuées), chiffres, ponctuation de base
+        return text.replaceAll("[^\\p{L}\\p{N}\\p{P}\\p{Z}\\s\\n\\r]", " ")
+                   .replace("💡", "[ASTUCE]")
+                   .replace("🎓", "[FORMATION]")
+                   .replace("🚨", "[ALERTE]")
+                   .replace("✅", "[OK]");
+    }
+
+    private void drawWrappedText(PDPageContentStream contentStream, String text, float width, PDType1Font font, int fontSize) throws IOException {
+        String[] words = text.split("\\s+");
+        StringBuilder line = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            
+            String testLine = line.length() == 0 ? word : line + " " + word;
+            float lineWidth = fontSize * font.getStringWidth(testLine) / 1000;
+            
+            if (lineWidth > width && line.length() > 0) {
+                contentStream.showText(line.toString());
+                contentStream.newLine();
+                line = new StringBuilder(word);
+            } else {
+                line = new StringBuilder(testLine);
+            }
+        }
+        
+        if (line.length() > 0) {
+            contentStream.showText(line.toString());
+            contentStream.newLine();
+        }
     }
 
     private CVAiDTO analyserCVAvecIA(MultipartFile cv) {

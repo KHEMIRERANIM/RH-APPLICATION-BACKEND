@@ -23,6 +23,7 @@ def load_json(filename):
 KNOWLEDGE_BASE = load_json('knowledge.json')
 TRAINING_LIBRARY = load_json('training_library.json')
 ENGLISH_REFERENCE = load_json('english_reference.json')
+AMBASSADEURS = load_json('ambassadeurs.json')
 
 app = Flask(__name__)
 CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
@@ -47,7 +48,8 @@ COACH_INTENTS = {
     "culture_rse": ["c'est quoi la rse", "environnement", "écologie", "valeurs de l'entreprise", "culture d'entreprise", "inclusion", "diversité", "éthique", "entreprise", "valeurs"],
     "preparation_entretien": ["comment me préparer", "conseil pour l'entretien", "aide entretien", "que dire à l'entretien", "questions fréquentes", "stress", "entrainement", "simuler"],
     "salaire": ["salaire", "rémunération", "combien je vais gagner", "smic", "argent", "paye", "budget"],
-    "trouver_offre": ["quelles sont les offres", "offre pour moi", "quel poste", "trouver un travail", "opportunités", "matcher", "compatibilité", "qui marche avec moi", "conseiller offre"]
+    "trouver_offre": ["quelles sont les offres", "offre pour moi", "quel poste", "trouver un travail", "opportunités", "matcher", "compatibilité", "qui marche avec moi", "conseiller offre"],
+    "equipe": ["qui travaille", "futur collègue", "ambassadeur", "équipe", "parler à", "collaborateur", "insider", "contact"]
 }
 
 # --- FONCTION DE NORMALISATION POUR LA ROBUSTESSE ---
@@ -77,12 +79,15 @@ INTERVIEW_QUESTIONS = [
 ]
 
 def analyze_sentiment(text):
-    positive_words = ['bien', 'super', 'génial', 'content', 'heureux', 'passion', 'motivé', 'excellent', 'merci', 'top', 'love', 'great', 'happy']
-    negative_words = ['stress', 'peur', 'difficile', 'nul', 'triste', 'mauvais', 'problème', 'inquiétude', 'fatigué', 'hard', 'bad', 'sad']
+    positive_words = ['bien', 'super', 'génial', 'content', 'heureux', 'passion', 'motivé', 'excellent', 'merci', 'top', 'love', 'great', 'happy', 'joyeux', 'joyeuse', 'fier', 'fière', 'fiére', 'ravi', 'ravie', 'extra', 'cool', 'bravo']
+    negative_words = ['stress', 'peur', 'difficile', 'nul', 'triste', 'mauvais', 'problème', 'inquiétude', 'fatigué', 'hard', 'bad', 'sad', 'déçu', 'angoisse', 'échec']
     
     text = text.lower()
-    pos_score = sum(1 for word in positive_words if word in text)
-    neg_score = sum(1 for word in negative_words if word in text)
+    # Utilisation de regex pour ne matcher que des mots entiers (évite les faux positifs comme 'sad' dans 'ambassadeur')
+    words = re.findall(r'\b\w+\b', text)
+    
+    pos_score = sum(1 for word in positive_words if word in words)
+    neg_score = sum(1 for word in negative_words if word in words)
     
     if pos_score > neg_score:
         return "positive"
@@ -143,7 +148,10 @@ def _extract_skills(text):
         "AWS", "Azure", "SQL", "MongoDB", "PostgreSQL", "JavaScript", "TypeScript", "Node.js",
         "C#", "PHP", "Laravel", "Agile", "Scrum", "DevOps", "CI/CD", "Git", "Machine Learning",
         "Data Science", "NLP", "Spark", "Hadoop", "Leadership", "Communication", "Linux", "Selenium",
-        "Flutter", "Kotlin", "Swift", "C++", "HTML", "CSS", "Figma"
+        "Flutter", "Kotlin", "Swift", "C++", "HTML", "CSS", "Figma",
+        "AI", "IA", "Intelligence Artificielle", "Artificial Intelligence", "Deep Learning",
+        "TensorFlow", "PyTorch", "Generated AI", "GenAI", "LLM", "Prompt Engineering",
+        "OpenAI", "Scikit-Learn", "FastAPI", "Flask", "Solidity", "Blockchain", "NoSQL"
     ]
     found = []
     for skill in skills_library:
@@ -312,11 +320,18 @@ def chat_coach():
                 reply = f"✅ Évaluation IA : {feedback} (Score Mots-Clés : {int(score)}/100)\n\nQuestion suivante : {next_question}"
                 return jsonify({"reply": reply})
 
-        # 2. MODE COACH CLASSIQUE (NLU + Mémoire Contextuelle)
-        user_vec = nlu_vectorizer.transform([user_message])
-        sim_scores = cosine_similarity(user_vec, nlu_matrix)[0]
-        best_match_idx = sim_scores.argmax()
-        best_score = sim_scores[best_match_idx]
+        # 2. MODE COACH CLASSIQUE        # --- ALGORITHME DE DECISION NLU ---
+        user_msg_vec = nlu_vectorizer.transform([user_message])
+        intent_scores = cosine_similarity(user_msg_vec, nlu_matrix)
+        best_intent_idx = intent_scores.argmax()
+        intent = intent_labels[best_intent_idx]
+        
+        # --- OVERRIDE MANUEL (PRIORITÉ CONTACT & EQUIPE) ---
+        contact_triggers = ["contacter", "parler", "qui", "equipe", "insider", "collaborateur", "personne", "quelqu'un", "coordonnées", "mail"]
+        if any(trigger in user_message.lower() for trigger in contact_triggers) and ("offre" in user_message.lower() or "poste" in user_message.lower()):
+            intent = "equipe"
+            
+        print(f"Intent détecté: {intent} (Score: {intent_scores.max()})")
         
         empathic_prefix = ""
         sentiment = analyze_sentiment(user_message_raw)
@@ -331,6 +346,15 @@ def chat_coach():
                 reply = empathic_prefix + "Avez-vous une inquiétude spécifique concernant cet entretien ? Je peux vous coacher."
                 return jsonify({"reply": reply})
 
+        # --- GESTION DES EMOTIONS PURES (FALLBACK EMPATHIQUE) ---
+        if best_score < 0.3 and sentiment != "neutral":
+            if sentiment == "positive":
+                reply = f"{empathic_prefix}C'est vraiment merveilleux de vous voir dans cet état d'esprit ! Cette attitude positive est un atout majeur pour votre carrière chez RH_RSE. Que puis-je faire pour prolonger ce moment ?"
+            else:
+                reply = f"{empathic_prefix}Je sens que vous traversez un moment difficile. Chez RH_RSE, nous valorisons l'humain avant tout. Voulez-vous que je vous aide à décompresser ou à préparer une étape spécifique ?"
+            return jsonify({"reply": reply})
+
+        best_score = intent_scores.max()
         # Seuil de déclenchement (0.1)
         if best_score < 0.1:
             # --- SEMANTIC KNOWLEDGE SEARCH (RAG LITE) ---
@@ -354,7 +378,7 @@ def chat_coach():
             else:
                 reply = empathic_prefix + "C'est une réflexion intéressante ! Toutefois, en tant que Coach RSE, je suis focalisé sur votre progression technique, nos valeurs d'entreprise et la préparation à l'entretien."
         else:
-            intent = intent_labels[best_match_idx]
+            intent = intent_labels[best_intent_idx]
             if intent == "salutation":
                 reply = empathic_prefix + f"Bonjour {candidat_name} ! Je suis votre Coach Virtuel Anti-Biais. Félicitations pour votre profil pour : {offre_title}. Comment voulez-vous orienter notre préparation ?"
             elif intent == "amelioration":
@@ -370,7 +394,8 @@ def chat_coach():
                 reply = empathic_prefix + "La question financière est légitime. Toute grille salariale de RH_RSE est transparente et exempte de biais de genre. Elle sera abordée avec le recruteur."
             elif intent == "trouver_offre":
                 try:
-                    url = "http://localhost:8081/api/recrutement/offres"
+                    # Utilisation de 127.0.0.1 pour plus de stabilité réseau local
+                    url = "http://127.0.0.1:8081/api/recrutement/offres"
                     req = urllib.request.Request(url)
                     response = urllib.request.urlopen(req)
                     offres = json.loads(response.read().decode('utf-8'))
@@ -380,17 +405,56 @@ def chat_coach():
                     elif not offres:
                         reply = empathic_prefix + "Aucune offre n'est publiée pour le moment."
                     else:
-                        skills_text = " ".join(extracted_skills)
+                        # Nettoyage et enrichissement du texte de recherche (Gestion synonymes IA)
+                        user_skills_set = {s.lower() for s in extracted_skills}
+                        search_text = " ".join(extracted_skills).lower()
+                        if "ia" in search_text or "ai" in search_text:
+                            search_text += " intelligence artificielle artificial machine learning deep"
+                        
                         offer_corpus = [ (off.get('titre', '') + " " + off.get('description', '') + " " + " ".join(off.get('competencesRequises', []))) for off in offres ]
-                        offer_vec = TfidfVectorizer(stop_words='english')
+                        
+                        # Utilisation d'un vectorizer sans stop_words restrictifs (ngram=2 pour 'AI Engineer')
+                        offer_vec = TfidfVectorizer(ngram_range=(1, 2)) 
                         offer_matrix = offer_vec.fit_transform(offer_corpus)
-                        user_query_vec = offer_vec.transform([skills_text])
+                        user_query_vec = offer_vec.transform([search_text])
+                        
                         sims = cosine_similarity(user_query_vec, offer_matrix)[0]
-                        idx = sims.argmax()
-                        if sims[idx] > 0.05:
-                            reply = empathic_prefix + f"L'offre '{offres[idx]['titre']}' est idéale pour vous (Matching IA : {int(sims[idx]*100)}%)."
+                        idx = int(sims.argmax())
+                        score_pct = int(sims[idx]*100)
+                        
+                        # --- ANALYSE DE RAISONNEMENT (REFLECTIVE BRAIN) ---
+                        best_offre = offres[idx]
+                        job_skills = {s.lower() for s in best_offre.get('competencesRequises', [])}
+                        
+                        matched = [s for s in job_skills if any(u in s or s in u for u in user_skills_set)]
+                        missing = [s for s in job_skills if not any(u in s or s in u for u in user_skills_set)]
+                        
+                        reasoning = f"\n\n--- 🧠 **Analyse de l'Expert IA** ---\n"
+                        if matched:
+                            reasoning += f"✅ **Points forts détectés** : {', '.join(matched).title()}\n"
+                        if missing:
+                            reasoning += f"⚠️ **Axe d'amélioration** : Il vous manque peut-être la maîtrise de : *{', '.join(missing).title()}* pour ce poste.\n"
+                        
+                        # Conseil personnalisé
+                        if score_pct >= 75:
+                            advice = "Vous êtes un candidat d'élite. Mon conseil : Mettez en avant vos réalisations concrètes sur ces technologies lors de l'entretien."
+                        elif score_pct >= 40:
+                            advice = "C'est une belle opportunité. Je vous conseille de suivre une formation rapide sur les points manquants pour rassurer le recruteur."
                         else:
-                            reply = empathic_prefix + "Je n'ai pas trouvé d'offre correspondant exactement à votre profil actuel."
+                            advice = "Un peu de patience. Concentrez-vous sur l'acquisition des compétences clés citées plus haut avant de postuler."
+                        
+                        reasoning += f"💡 **Conseil de carrière** : {advice}"
+
+                        if sims[idx] >= 0.70:
+                            reply = empathic_prefix + f"Après analyse approfondie, l'offre '{best_offre['titre']}' est **idéale** pour votre profil (Matching IA : {score_pct}%)." + reasoning
+                        elif sims[idx] >= 0.35:
+                            reply = empathic_prefix + f"J'ai trouvé une excellente piste : l'offre '{best_offre['titre']}' (Matching IA : {score_pct}%). Voici pourquoi cela match avec vous." + reasoning
+                        elif sims[idx] > 0.01:
+                            reply = empathic_prefix + f"J'ai repéré l'offre '{best_offre['titre']}' (Matching IA : {score_pct}%). Le score est modeste, mais c'est un bon point de départ pour une transition." + reasoning
+                        else:
+                            reply = empathic_prefix + "Mon raisonnement actuel ne détecte aucune offre correspondant parfaitement à votre profil. Essayez d'enrichir votre CV avec des compétences ciblées (IA, Data, Web...)." 
+                        
+                        return jsonify({"reply": reply})
                 except Exception:
                     reply = "Service de base de données temporairement indisponible."
             else:
@@ -400,6 +464,30 @@ def chat_coach():
         bias_keywords = ["femme", "homme", "vieux", "jeune", "origine", "nationalité", "religion"]
         if any(w in user_message.lower() for w in bias_keywords):
             reply = "💡 [Note RSE] : Je remarque une mention de critères d'identité. Rappelez-vous que chez RH_RSE, notre IA de matching ignore ces données pour se concentrer exclusivement sur vos compétences réelles. C'est notre garantie d'équité ! \n\n" + reply
+
+        # --- LOGIQUE AMBASSADEUR (INSIDER) ---
+        if intent == "equipe":
+            # Trouver l'ambassadeur correspondant au département via mots-clés dans le titre OU le message
+            context_text = (user_message + " " + offre_title).lower()
+            dept = "IT & Développement" # Par défaut
+            
+            mapping = {
+                "Finance & Administration": ["finance", "comptable", "admin", "achat", "gestion", "compta", "argent", "paye"],
+                "Marketing & Communication": ["marketing", "com", "digital", "growth", "réseaux", "pub"],
+                "Commercial & Ventes": ["commercial", "ventes", "sales", "business", "négociateur", "client"],
+                "Design & Produit": ["design", "ux", "ui", "graphiste", "produit", "maquette"],
+                "Ressources Humaines": ["rh", "talent", "recrutement", "humaine", "personnel", "embauche"],
+                "IT & Développement": ["tech", "dev", "it", "code", "développeur", "développeuse", "ingenieur", "fullstack", "data", "web"]
+            }
+            
+            for d, keywords in mapping.items():
+                if any(k in context_text for k in keywords):
+                    dept = d
+                    break
+            
+            amb = next((a for a in AMBASSADEURS if a['departement'] == dept), AMBASSADEURS[0])
+            reply = f"C'est une excellente idée de vouloir découvrir l'équipe ! Dans le département **{dept}**, vous travaillerez notamment avec **{amb['prenom']} {amb['nom']}** ({amb['poste']}). \n\nSon petit message d'accueil : *\"{amb['bio']}\"* \n\n💡 Conseil d'insider pour ce poste : {amb['conseil']} \n\nVous pouvez le contacter à : {amb['email']}"
+            return jsonify({"reply": reply})
 
         # --- RECOMMANDATION DE FORMATIONS (UPSKILLING) ---
         if "conseil" in user_message.lower() or "améliorer" in user_message.lower() or "apprendre" in user_message.lower():
