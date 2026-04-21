@@ -47,6 +47,51 @@ public class CareerPlanService {
                 .orElseThrow(() -> new RuntimeException("Utilisateur introuvable : " + email));
     }
 
+    // ── CALCUL DES SCORES BACKEND ─────────────────────────────────────────
+    private void computeScores(EvolutionPlanEntity plan) {
+        if (plan == null) return;
+
+        List<EmployeeCertification> certifs = plan.getCertifications() != null
+                ? plan.getCertifications()
+                : new ArrayList<>();
+
+        long totalTech = certifs.stream()
+                .filter(c -> c.getType() != null && c.getType().name().equalsIgnoreCase("TECHNIQUE"))
+                .count();
+
+        long obtainedTech = certifs.stream()
+                .filter(c -> c.getType() != null
+                        && c.getType().name().equalsIgnoreCase("TECHNIQUE")
+                        && c.getStatut() != null
+                        && c.getStatut().name().equalsIgnoreCase("OBTENU"))
+                .count();
+
+        long totalSoft = certifs.stream()
+                .filter(c -> c.getType() != null && c.getType().name().equalsIgnoreCase("SOFT_SKILL"))
+                .count();
+
+        long obtainedSoft = certifs.stream()
+                .filter(c -> c.getType() != null
+                        && c.getType().name().equalsIgnoreCase("SOFT_SKILL")
+                        && c.getStatut() != null
+                        && c.getStatut().name().equalsIgnoreCase("OBTENU"))
+                .count();
+
+        int scoreTechnique = totalTech == 0 ? 0 : (int) Math.round((obtainedTech * 100.0) / totalTech);
+        int scoreSoftSkill = totalSoft == 0 ? 0 : (int) Math.round((obtainedSoft * 100.0) / totalSoft);
+
+        int poidsTech = plan.getPoidsScoreTechnique() != null ? plan.getPoidsScoreTechnique() : 70;
+        int poidsSoft = plan.getPoidsScoreSoftSkill() != null ? plan.getPoidsScoreSoftSkill() : 30;
+
+        int scoreGlobal = (int) Math.round(
+                (scoreTechnique * poidsTech + scoreSoftSkill * poidsSoft) / 100.0
+        );
+
+        plan.setScoreTechnique(scoreTechnique);
+        plan.setScoreSoftSkill(scoreSoftSkill);
+        plan.setScoreGlobal(scoreGlobal);
+    }
+
     // ── CREATE ────────────────────────────────────────────────────────────
     public EvolutionPlanEntity createPlan(CareerPlanDTO dto) {
         User employee = getCurrentUser();
@@ -61,7 +106,7 @@ public class CareerPlanService {
         Career target = careerRepo.findById(dto.getTargetCareerId())
                 .orElseThrow(() -> new RuntimeException("Poste cible introuvable"));
 
-        // ✅ Copier les certifications requises du poste cible
+        // Copier les certifications requises du poste cible
         List<EmployeeCertification> certifications = new ArrayList<>();
         if (target.getCertifRequises() != null) {
             for (EmployeeCertification certifRequise : target.getCertifRequises()) {
@@ -89,32 +134,48 @@ public class CareerPlanService {
                         ? dto.getCurrentSkills() : new ArrayList<>())
                 .certifications(certifications)
                 .formationsRecommandees(new ArrayList<>())
+                .commentaireAdmin(null)
+                .poidsScoreTechnique(70)
+                .poidsScoreSoftSkill(30)
+                .scoreTechnique(0)
+                .scoreSoftSkill(0)
+                .scoreGlobal(0)
                 .build();
 
+        computeScores(plan);
         return repo.save(plan);
     }
 
     // ── GET ALL ───────────────────────────────────────────────────────────
     public List<EvolutionPlanEntity> getAll() {
-        return repo.findAll();
+        List<EvolutionPlanEntity> plans = repo.findAll();
+        plans.forEach(this::computeScores);
+        return plans;
     }
 
     public List<EvolutionPlanEntity> getMyPlans() {
-        return repo.findByEmployeeId(getCurrentUser().getId());
+        List<EvolutionPlanEntity> plans = repo.findByEmployeeId(getCurrentUser().getId());
+        plans.forEach(this::computeScores);
+        return plans;
     }
 
     public List<EvolutionPlanEntity> getByEmployeeId(String employeeId) {
-        return repo.findByEmployeeId(employeeId);
+        List<EvolutionPlanEntity> plans = repo.findByEmployeeId(employeeId);
+        plans.forEach(this::computeScores);
+        return plans;
     }
 
     // ── UPDATE ────────────────────────────────────────────────────────────
     public EvolutionPlanEntity updatePlan(String id, CareerPlanDTO dto) {
         EvolutionPlanEntity plan = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan introuvable"));
+
         if (dto.getCurrentCareerId() != null) plan.setCurrentCareerId(dto.getCurrentCareerId());
-        if (dto.getTargetCareerId()  != null) plan.setTargetCareerId(dto.getTargetCareerId());
-        if (dto.getCurrentSkills()   != null) plan.setCompetencesJson(dto.getCurrentSkills());
+        if (dto.getTargetCareerId() != null) plan.setTargetCareerId(dto.getTargetCareerId());
+        if (dto.getCurrentSkills() != null) plan.setCompetencesJson(dto.getCurrentSkills());
+
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         return repo.save(plan);
     }
 
@@ -123,21 +184,28 @@ public class CareerPlanService {
     public EvolutionPlanEntity enrichPlan(String id, Map<String, Object> payload) {
         EvolutionPlanEntity plan = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan introuvable"));
-        if (payload.containsKey("commentaireAdmin"))
+
+        if (payload.containsKey("commentaireAdmin")) {
             plan.setCommentaireAdmin((String) payload.get("commentaireAdmin"));
-        if (payload.containsKey("formationsRecommandees"))
+        }
+
+        if (payload.containsKey("formationsRecommandees")) {
             plan.setFormationsRecommandees((List<String>) payload.get("formationsRecommandees"));
+        }
+
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         return repo.save(plan);
     }
 
     // ── SAVE COMPETENCES ──────────────────────────────────────────────────
-    // ✅ Reçoit List<String> (JSON strings sérialisés par le controller)
     public EvolutionPlanEntity saveCompetences(String id, List<String> competences) {
         EvolutionPlanEntity plan = repo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Plan introuvable"));
+
         plan.setCompetencesJson(competences);
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         return repo.save(plan);
     }
 
@@ -145,12 +213,18 @@ public class CareerPlanService {
     public EvolutionPlanEntity addCertification(String planId, Object certifObj) {
         EvolutionPlanEntity plan = repo.findById(planId)
                 .orElseThrow(() -> new RuntimeException("Plan introuvable"));
+
         EmployeeCertification certif = objectMapper.convertValue(certifObj, EmployeeCertification.class);
         certif.setId(UUID.randomUUID().toString());
         certif.setEvolutionPlanId(planId);
-        if (plan.getCertifications() == null) plan.setCertifications(new ArrayList<>());
+
+        if (plan.getCertifications() == null) {
+            plan.setCertifications(new ArrayList<>());
+        }
+
         plan.getCertifications().add(certif);
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         return repo.save(plan);
     }
 
@@ -171,28 +245,32 @@ public class CareerPlanService {
                     EmployeeCertification existing = certifs.get(i);
 
                     // Préserver les champs non envoyés
-                    if (updated.getFichierUrl()  == null) updated.setFichierUrl(existing.getFichierUrl());
-                    if (updated.getFichierNom()  == null) updated.setFichierNom(existing.getFichierNom());
-                    if (updated.getNom()         == null) updated.setNom(existing.getNom());
-                    if (updated.getType()        == null) updated.setType(existing.getType());
+                    if (updated.getFichierUrl() == null) updated.setFichierUrl(existing.getFichierUrl());
+                    if (updated.getFichierNom() == null) updated.setFichierNom(existing.getFichierNom());
+                    if (updated.getNom() == null) updated.setNom(existing.getNom());
+                    if (updated.getType() == null) updated.setType(existing.getType());
                     if (updated.getMethodeEval() == null) updated.setMethodeEval(existing.getMethodeEval());
-                    if (updated.getStatut()      == null) updated.setStatut(existing.getStatut());
+                    if (updated.getStatut() == null) updated.setStatut(existing.getStatut());
+                    if (updated.getNiveauRequis() == null) updated.setNiveauRequis(existing.getNiveauRequis());
+                    if (updated.getCommentaireAdmin() == null) updated.setCommentaireAdmin(existing.getCommentaireAdmin());
+                    if (updated.getObligatoire() == null) updated.setObligatoire(existing.getObligatoire());
+                    if (updated.getValideParAdmin() == null) updated.setValideParAdmin(existing.getValideParAdmin());
 
-                    // ✅ Validation admin → statut OBTENU + notification
+                    // Validation admin → statut OBTENU + notification
                     if (Boolean.TRUE.equals(updated.getValideParAdmin())
                             && !Boolean.TRUE.equals(existing.getValideParAdmin())) {
                         updated.setStatut(CertificationStatus.OBTENU);
                         String nomCertif = updated.getNom() != null ? updated.getNom() : "certification";
+
                         notificationService.send(
                                 plan.getEmployeeId(),
                                 "✅ Certification validée !",
-                                "Votre certification \"" + nomCertif
-                                        + "\" a été validée par l'administrateur.",
+                                "Votre certification \"" + nomCertif + "\" a été validée par l'administrateur.",
                                 "CERTIF_VALIDATED"
                         );
                     }
 
-                    // ✅ Rejet admin → statut EN_COURS
+                    // Rejet admin → statut EN_COURS
                     if (Boolean.FALSE.equals(updated.getValideParAdmin())
                             && Boolean.TRUE.equals(existing.getValideParAdmin())) {
                         updated.setStatut(CertificationStatus.EN_COURS);
@@ -205,6 +283,7 @@ public class CareerPlanService {
         }
 
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         return repo.save(plan);
     }
 
@@ -227,22 +306,21 @@ public class CareerPlanService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Certification introuvable"));
 
-        // Création du dossier d'upload si nécessaire
         Path uploadPath = Paths.get(uploadDir);
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
 
         String originalName = file.getOriginalFilename();
-        String extension = originalName != null ?
-                originalName.substring(originalName.lastIndexOf(".")) : ".pdf";
+        String extension = (originalName != null && originalName.contains("."))
+                ? originalName.substring(originalName.lastIndexOf("."))
+                : ".pdf";
 
         String uniqueName = "certif_" + certifId + "_" + System.currentTimeMillis() + extension;
 
         Path filePath = uploadPath.resolve(uniqueName);
         Files.write(filePath, file.getBytes());
 
-        // Mise à jour de la certification
         target.setFichierNom(originalName);
         target.setFichierUrl("/api/evolution-plans/files/" + uniqueName);
 
@@ -251,9 +329,9 @@ public class CareerPlanService {
         }
 
         plan.setUpdatedAt(LocalDateTime.now());
+        computeScores(plan);
         repo.save(plan);
 
-        // Retour au format Map (attendu par Angular et le Controller)
         return Map.of(
                 "fileName", originalName != null ? originalName : uniqueName,
                 "fileUrl", "/api/evolution-plans/files/" + uniqueName,
@@ -265,5 +343,4 @@ public class CareerPlanService {
     public void deletePlan(String id) {
         repo.deleteById(id);
     }
-
 }
