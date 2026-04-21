@@ -7,8 +7,8 @@
     "departement": "IT & Développement",
     "email": "thomas.d@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=thomas",
-    "bio": "Passionné par l'architecture propre et le mentorat. Je serai ravi de vous parler de notre stack technique !",
-    "conseil": "N'hésitez pas à poser des questions techniques précises, on adore la curiosité ici !"
+    "bio": "Passionné par l'architecture propre, le Clean Code et le mentorat. Je travaille sur la partie Backend en Spring Boot 3 et Frontend en Angular 17. Je serai ravi de vous parler de notre stack technique et de nos rituels agiles !",
+    "conseil": "N'hésitez pas à poser des questions techniques précises, on adore la curiosité ici ! Montrez que vous vous intéressez à la qualité du code."
   },
   {
     "id": "amb_2",
@@ -18,8 +18,8 @@
     "departement": "Ressources Humaines",
     "email": "sarah.l@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=sarah",
-    "bio": "Mon rôle est de m'assurer que vous vous épanouissez chez nous. La culture RSE est mon moteur.",
-    "conseil": "Soyez vous-même ! L'authenticité est la valeur n°1 de notre processus de recrutement."
+    "bio": "Mon rôle est de m'assurer que vous vous épanouissez chez nous, de l'onboarding au développement de carrière. La culture RSE et la diversité sont mes moteurs au quotidien.",
+    "conseil": "Soyez vous-même ! L'authenticité est la valeur n°1 de notre processus de recrutement. Nous cherchons des personnalités avant tout."
   },
   {
     "id": "amb_3",
@@ -29,8 +29,8 @@
     "departement": "Design & Produit",
     "email": "lucas.v@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=lucas",
-    "bio": "Je crée des expériences qui ont du sens. Hâte de voir votre créativité à l'œuvre.",
-    "conseil": "Préparez votre portfolio avec des cas concrets d'utilisation, c'est ce qui nous parle le plus."
+    "bio": "Je crée des expériences qui ont du sens et qui sont accessibles à tous (WWAG 2.1). Mon défi est de rendre la technologie humaine et inclusive. Hâte de voir votre créativité à l'œuvre.",
+    "conseil": "Préparez votre portfolio avec des cas concrets d'utilisation et expliquez votre démarche de recherche utilisateur, c'est ce qui nous parle le plus."
   },
   {
     "id": "amb_4",
@@ -40,8 +40,8 @@
     "departement": "Finance & Administration",
     "email": "amelie.b@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=amelie",
-    "bio": "Je veille à la bonne gestion des ressources de l'entreprise. La transparence est ma priorité.",
-    "conseil": "Pour la finance, nous apprécions particulièrement la rigueur et le sens du détail."
+    "bio": "Je veille à la bonne gestion des ressources de l'entreprise et à l'équité salariale. La transparence financière est au coeur de notre modèle de confiance.",
+    "conseil": "Pour les fonctions support, nous apprécions particulièrement la rigueur, l'autonomie et le sens du service aux équipes."
   },
   {
     "id": "amb_5",
@@ -51,8 +51,8 @@
     "departement": "Marketing & Communication",
     "email": "kevin.g@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=kevin",
-    "bio": "Propulser notre marque et nos valeurs RSE à travers le monde est mon défi quotidien.",
-    "conseil": "Montrez-nous comment vous analysez l'impact de vos campagnes, la donnée est reine !"
+    "bio": "Propulser notre marque et nos valeurs RSE à travers le monde est mon défi quotidien. Je gère des campagnes basées sur l'éthique et la data responsable.",
+    "conseil": "Montrez-nous comment vous analysez l'impact social et environnemental de vos actions marketing, au-delà des simples clics."
   },
   {
     "id": "amb_6",
@@ -62,7 +62,7 @@
     "departement": "Commercial & Ventes",
     "email": "sofia.m@rh-rse.com",
     "photo": "https://i.pravatar.cc/150?u=sofia",
-    "bio": "J'accompagne nos clients vers des solutions responsables. Le relationnel est au cœur de tout.",
-    "conseil": "Préparez votre argumentaire sur la valeur ajoutée éthique de nos produits."
+    "bio": "J'accompagne nos clients vers des solutions de recrutement responsables. Pour moi, une vente réussie est une vente qui respecte l'éthique et les besoins réels du client.",
+    "conseil": "Préparez votre argumentaire sur la valeur ajoutée éthique de nos produits. Le 'Good for business, good for people' est notre mantra."
   }
 ]

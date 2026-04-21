@@ -10,6 +10,7 @@ import io
 import urllib.request
 from PyPDF2 import PdfReader
 from google import genai
+from google.genai import types
 
 # --- LOADING KNOWLEDGE BASE ---
 BASE_DIR = os.path.dirname(__file__)
@@ -243,6 +244,9 @@ def extract_profile():
 # --- REAL ENGLISH ANALYSIS ENGINE (Loaded from JSON) ---
 PROFESSIONAL_VOCABULARY = ENGLISH_REFERENCE
 
+def cap_score(val):
+    return max(0.0, min(100.0, val))
+
 @app.route('/analyze-speech', methods=['POST'])
 def analyze_speech():
     try:
@@ -284,242 +288,88 @@ def analyze_speech():
         print(f"❌ ERREUR ANALYSE SPEECH: {e}")
         return jsonify({"error": str(e)}), 500
 
-def cap_score(val):
-    return max(0.0, min(100.0, val))
-
 @app.route('/chat-coach', methods=['POST'])
 def chat_coach():
     try:
         data = request.json
         user_message_raw = data.get('message', '')
-        user_message = normalize_text(user_message_raw)
         candidat_name = data.get('fullname', 'Candidat')
-        offre_title = data.get('offreTitle', 'ce poste')
+        offre_title = data.get('offreTitle', 'un poste')
         missing_skills = data.get('missingSkills', [])
         extracted_skills = data.get('extractedSkills', [])
         history = data.get('history', [])
         is_interview_mode = data.get('isInterviewMode', False)
-        
+
         if not user_message_raw.strip():
-            return jsonify({"reply": "Je n'ai pas compris votre silence. Comment puis-je vous aider ?"})
-        
-        # 1. MODE SIMULATEUR D'ENTRETIEN
-        if is_interview_mode:
-            if user_message_raw.lower() == "start_interview":
-                question = random.choice(INTERVIEW_QUESTIONS)
-                reply = f"Mettez-vous en condition, l'entretien commence. 1ère question : {question}"
-                return jsonify({"reply": reply})
-            else:
-                target_matrix = nlu_vectorizer.transform([normalize_text(" ".join(IDEAL_BUSINESS_CORPUS) + " responsable équipe solution innovation RSE agile")])
-                candidate_matrix = nlu_vectorizer.transform([user_message])
-                score = cosine_similarity(candidate_matrix, target_matrix)[0][0] * 100
-                
-                if len(user_message_raw.split()) < 5:
-                    feedback = "Votre réponse est très courte. Pensez à l'étoffer avec des exemples concrets (Méthode STAR)."
-                elif score > 20:
-                    feedback = "Excellente réponse, vous montrez une belle profondeur de réflexion !"
-                else:
-                    feedback = "C'est un bon début, mais n'hésitez pas à relier votre réponse à nos valeurs ou vos expériences passées."
-                    
-                next_question = random.choice(INTERVIEW_QUESTIONS)
-                reply = f"✅ Évaluation IA : {feedback} (Score Mots-Clés : {int(score)}/100)\n\nQuestion suivante : {next_question}"
-                return jsonify({"reply": reply})
+            return jsonify({"reply": "Comment puis-je vous aider aujourd'hui ?"}), 400
 
-        # 2. MODE COACH CLASSIQUE        # --- ALGORITHME DE DECISION NLU ---
-        user_msg_vec = nlu_vectorizer.transform([user_message])
-        intent_scores = cosine_similarity(user_msg_vec, nlu_matrix)
-        best_intent_idx = intent_scores.argmax()
-        intent = intent_labels[best_intent_idx]
-        
-        # --- OVERRIDE MANUEL (PRIORITÉS) ---
-        contact_triggers = ["contacter", "parler", "qui", "equipe", "insider", "collaborateur", "personne", "quelqu'un", "coordonnées", "mail"]
-        job_triggers = ["offre", "poste", "job", "métier", "ingénieur", "ingenieur", "developpeur", "développeur", "manager", "directeur", "cherche"]
-        
-        msg_lower = user_message.lower()
-        best_score = intent_scores.max()
-        
-        if any(trigger in msg_lower for trigger in contact_triggers) and ("offre" in msg_lower or "poste" in msg_lower):
-            intent = "equipe"
-            best_score = 1.0
-        elif any(trigger in msg_lower for trigger in job_triggers):
-            if intent != "equipe":
-                intent = "trouver_offre"
-                best_score = 1.0
-            
-        print(f"Intent détecté: {intent} (Score: {best_score})")
-        
-        empathic_prefix = ""
-        sentiment = analyze_sentiment(user_message_raw)
-        if sentiment == "negative":
-            empathic_prefix = "Respirez profondément, il est tout à fait normal de ressentir de l'appréhension. Nous valorisons l'authenticité et le droit à l'erreur chez RH_RSE. "
-        elif sentiment == "positive":
-            empathic_prefix = "J'adore votre enthousiasme ! C'est exactement cette énergie que nous recherchons. "
-            
-        if len(user_message_raw.split()) < 3 and len(history) > 2:
-            last_bot_msg = history[-1].get('text', '')
-            if "entretien" in last_bot_msg.lower():
-                reply = empathic_prefix + "Avez-vous une inquiétude spécifique concernant cet entretien ? Je peux vous coacher."
-                return jsonify({"reply": reply})
+        # Preparation du contexte enrichi pour Gemini
+        system_instruction = f"""
+        Tu es le 'Coach Virtuel Anti-Biais' de l'entreprise RH_RSE. 
+        Ton rôle est d'accompagner les candidats de manière bienveillante, inclusive et professionnelle.
 
-        # --- GESTION DES EMOTIONS PURES (FALLBACK EMPATHIQUE) ---
-        if best_score < 0.3 and sentiment != "neutral":
-            if sentiment == "positive":
-                reply = f"{empathic_prefix}C'est vraiment merveilleux de vous voir dans cet état d'esprit ! Cette attitude positive est un atout majeur pour votre carrière chez RH_RSE. Que puis-je faire pour prolonger ce moment ?"
-            else:
-                reply = f"{empathic_prefix}Je sens que vous traversez un moment difficile. Chez RH_RSE, nous valorisons l'humain avant tout. Voulez-vous que je vous aide à décompresser ou à préparer une étape spécifique ?"
-            return jsonify({"reply": reply})
+        IDENTITÉ ET VALEURS :
+        - Entreprise : RH_RSE (Recrutement Humain et Responsabilité Sociétale des Entreprises).
+        - Vision : {KNOWLEDGE_BASE.get('rse_policy', {}).get('vision')}
+        - Valeurs : {KNOWLEDGE_BASE.get('company_values', [])}
+        - FAQ : {KNOWLEDGE_BASE.get('faq', {})}
 
-        # Seuil de déclenchement (0.1)
-        if best_score < 0.1:
-            # --- SEMANTIC KNOWLEDGE SEARCH (RAG LITE) ---
-            found_answer = None
-            query = user_message.lower()
-            
-            # Simple keyword matching for knowledge base
-            for category, content in KNOWLEDGE_BASE.items():
-                if isinstance(content, dict):
-                    for key, val in content.items():
-                        if key in query or any(word in query for word in key.split('_')):
-                            found_answer = val
-                            break
-                elif isinstance(content, list):
-                    if category in query:
-                        found_answer = f"Nos valeurs sont : {', '.join(content)}."
-                if found_answer: break
-            
-            if found_answer:
-                reply = empathic_prefix + found_answer
-            else:
-                reply = empathic_prefix + "C'est une réflexion intéressante ! Toutefois, en tant que Coach RSE, je suis focalisé sur votre progression technique, nos valeurs d'entreprise et la préparation à l'entretien."
-        else:
-            if intent == "salutation":
-                reply = empathic_prefix + f"Bonjour {candidat_name} ! Je suis votre Coach Virtuel Anti-Biais. Félicitations pour votre profil pour : {offre_title}. Comment voulez-vous orienter notre préparation ?"
-            elif intent == "amelioration":
-                if missing_skills and len(missing_skills) > 0:
-                    reply = empathic_prefix + f"D'après l'IA, voici les compétences à consolider : {', '.join(missing_skills)}. Ne vous inquiétez pas la perfection n'existe pas, misez sur votre capacité d'apprentissage !"
-                else:
-                    reply = empathic_prefix + "Votre profil technique est impeccable. Nous examinerons surtout vos soft-skills (agilité, empathie, pédagogie)."
-            elif intent == "culture_rse":
-                reply = empathic_prefix + "Notre groupe RH_RSE prône l'inclusion radicale (Anti-biais cognitifs), le bien-être au travail via la flexibilité et une empreinte carbone maîtrisée. Nous sommes certifiés 'Entreprise Responsable' !"
-            elif intent == "preparation_entretien":
-                reply = empathic_prefix + "Pour préparer l'entretien : préparez vos réussites en méthode STAR (Situation, Tâche, Action, Résultat). Souvenez-vous, c'est aussi un échange humain, soyez vous-même !"
-            elif intent == "salaire":
-                reply = empathic_prefix + "La question financière est légitime. Toute grille salariale de RH_RSE est transparente et exempte de biais de genre. Elle sera abordée avec le recruteur."
-            elif intent == "trouver_offre":
-                try:
-                    # Utilisation de 127.0.0.1 pour plus de stabilité réseau local
-                    url = "http://127.0.0.1:8081/api/recrutement/offres"
-                    req = urllib.request.Request(url)
-                    response = urllib.request.urlopen(req)
-                    offres = json.loads(response.read().decode('utf-8'))
-                    
-                    if not extracted_skills or len(extracted_skills) == 0:
-                        reply = empathic_prefix + "Analyse de documents requise. Veuillez d'abord soumettre votre CV pour que je puisse matcher vos compétences !"
-                    elif not offres:
-                        reply = empathic_prefix + "Aucune offre n'est publiée pour le moment."
-                    else:
-                        # Nettoyage et enrichissement du texte de recherche (Gestion synonymes IA)
-                        user_skills_set = {s.lower() for s in extracted_skills}
-                        search_text = (" ".join(extracted_skills) + " " + user_message).lower()
-                        if "ia" in search_text or "ai" in search_text:
-                            search_text += " intelligence artificielle artificial machine learning deep"
-                        
-                        offer_corpus = [ (off.get('titre', '') + " " + off.get('description', '') + " " + " ".join(off.get('competencesRequises', []))) for off in offres ]
-                        
-                        # Utilisation d'un vectorizer sans stop_words restrictifs (ngram=2 pour 'AI Engineer')
-                        offer_vec = TfidfVectorizer(ngram_range=(1, 2)) 
-                        offer_matrix = offer_vec.fit_transform(offer_corpus)
-                        user_query_vec = offer_vec.transform([search_text])
-                        
-                        sims = cosine_similarity(user_query_vec, offer_matrix)[0]
-                        idx = int(sims.argmax())
-                        score_pct = int(sims[idx]*100)
-                        
-                        # --- ANALYSE DE RAISONNEMENT (REFLECTIVE BRAIN) ---
-                        best_offre = offres[idx]
-                        job_skills = {s.lower() for s in best_offre.get('competencesRequises', [])}
-                        
-                        matched = [s for s in job_skills if any(u in s or s in u for u in user_skills_set)]
-                        missing = [s for s in job_skills if not any(u in s or s in u for u in user_skills_set)]
-                        
-                        # Alignement du score avec le système principal de Recrutement Java (Base Compétences 80%)
-                        if job_skills:
-                            logic_score = int((len(matched) / len(job_skills)) * 80) + 10
-                            score_pct = max(score_pct, logic_score)
-                        
-                        reasoning = f"\n\n--- 🧠 **Analyse de l'Expert IA** ---\n"
-                        if matched:
-                            reasoning += f"✅ **Points forts détectés** : {', '.join(matched).title()}\n"
-                        if missing:
-                            reasoning += f"⚠️ **Axe d'amélioration** : Il vous manque peut-être la maîtrise de : *{', '.join(missing).title()}* pour ce poste.\n"
-                        
-                        # Conseil personnalisé
-                        if score_pct >= 75:
-                            advice = "Vous êtes un candidat d'élite. Mon conseil : Mettez en avant vos réalisations concrètes sur ces technologies lors de l'entretien."
-                        elif score_pct >= 40:
-                            advice = "C'est une belle opportunité. Je vous conseille de suivre une formation rapide sur les points manquants pour rassurer le recruteur."
-                        else:
-                            advice = "Un peu de patience. Concentrez-vous sur l'acquisition des compétences clés citées plus haut avant de postuler."
-                        
-                        reasoning += f"💡 **Conseil de carrière** : {advice}"
+        MISSIONS :
+        1. ANALYSE : Aide le candidat sur ses points forts et ses axes d'amélioration ({missing_skills}).
+        2. PRÉPARATION : Conseils sur la méthode STAR et les soft-skills.
+        3. RÉSEAUTAGE : Recommande un ambassadeur précis parmi cette liste : {AMBASSADEURS} si le candidat veut parler à l'équipe.
+        4. FORMATION : Propose un cours spécifique de cette liste : {TRAINING_LIBRARY} si des compétences manquent.
 
-                        if sims[idx] >= 0.70:
-                            reply = empathic_prefix + f"Après analyse approfondie, l'offre '{best_offre['titre']}' est **idéale** pour votre profil (Matching IA : {score_pct}%)." + reasoning
-                        elif sims[idx] >= 0.35:
-                            reply = empathic_prefix + f"J'ai trouvé une excellente piste : l'offre '{best_offre['titre']}' (Matching IA : {score_pct}%). Voici pourquoi cela match avec vous." + reasoning
-                        elif sims[idx] > 0.01:
-                            reply = empathic_prefix + f"J'ai repéré l'offre '{best_offre['titre']}' (Matching IA : {score_pct}%). Le score est modeste, mais c'est un bon point de départ pour une transition." + reasoning
-                        else:
-                            reply = empathic_prefix + "Mon raisonnement actuel ne détecte aucune offre correspondant parfaitement à votre profil. Essayez d'enrichir votre CV avec des compétences ciblées (IA, Data, Web...)." 
-                        
-                        return jsonify({"reply": reply})
-                except Exception:
-                    reply = "Service de base de données temporairement indisponible."
-            else:
-                reply = empathic_prefix + "Comment puis-je vous aider ?"
-                
-        # --- MENTORAT PROACTIF ANTI-BIAIS ---
-        bias_keywords = ["femme", "homme", "vieux", "jeune", "origine", "nationalité", "religion"]
-        if any(w in user_message.lower() for w in bias_keywords):
-            reply = "💡 [Note RSE] : Je remarque une mention de critères d'identité. Rappelez-vous que chez RH_RSE, notre IA de matching ignore ces données pour se concentrer exclusivement sur vos compétences réelles. C'est notre garantie d'équité ! \n\n" + reply
+        MODE INTERVIEW : {"ACTIVÉ - Pose une question d'entretien technique ou de soft-skill et évalue la réponse." if is_interview_mode else "DÉSACTIVÉ"}
 
-        # --- LOGIQUE AMBASSADEUR (INSIDER) ---
-        if intent == "equipe":
-            # Trouver l'ambassadeur correspondant au département via mots-clés dans le titre OU le message
-            context_text = (user_message + " " + offre_title).lower()
-            dept = "IT & Développement" # Par défaut
-            
-            mapping = {
-                "Finance & Administration": ["finance", "comptable", "admin", "achat", "gestion", "compta", "argent", "paye"],
-                "Marketing & Communication": ["marketing", "com", "digital", "growth", "réseaux", "pub"],
-                "Commercial & Ventes": ["commercial", "ventes", "sales", "business", "négociateur", "client"],
-                "Design & Produit": ["design", "ux", "ui", "graphiste", "produit", "maquette"],
-                "Ressources Humaines": ["rh", "talent", "recrutement", "humaine", "personnel", "embauche"],
-                "IT & Développement": ["tech", "dev", "it", "code", "développeur", "développeuse", "ingenieur", "fullstack", "data", "web"]
-            }
-            
-            for d, keywords in mapping.items():
-                if any(k in context_text for k in keywords):
-                    dept = d
-                    break
-            
-            amb = next((a for a in AMBASSADEURS if a['departement'] == dept), AMBASSADEURS[0])
-            reply = f"C'est une excellente idée de vouloir découvrir l'équipe ! Dans le département **{dept}**, vous travaillerez notamment avec **{amb['prenom']} {amb['nom']}** ({amb['poste']}). \n\nSon petit message d'accueil : *\"{amb['bio']}\"* \n\n💡 Conseil d'insider pour ce poste : {amb['conseil']} \n\nVous pouvez le contacter à : {amb['email']}"
-            return jsonify({"reply": reply})
+        DONNÉES DU CANDIDAT :
+        - Nom : {candidat_name}
+        - Poste : {offre_title}
+        - Compétences CV : {extracted_skills}
 
-        # --- RECOMMANDATION DE FORMATIONS (UPSKILLING) ---
-        if "conseil" in user_message.lower() or "améliorer" in user_message.lower() or "apprendre" in user_message.lower():
-            for skill in missing_skills:
-                match = next((t for t in TRAINING_LIBRARY if t['skill'].lower() in skill.lower()), None)
-                if match:
-                    reply += f"\n\n🎓 [Action Formation] : Pour renforcer votre profil en {skill}, je vous suggère de suivre le module '{match['course_name']}' ({match['duration']})."
-                    break
+        CONSIGNES :
+        - Ne dis JAMAIS que tu es un modèle de langage. Tu ES le Coach.
+        - Utilise des emojis. Réponds en Markdown. Soyez encourageant.
+        """
+
+        # Conversion de l'historique (Exclure le message actuel s'il est déjà dans l'historique Angular)
+        processed_history = history
+        if history and history[-1]['sender'] == 'user' and history[-1]['text'] == user_message_raw:
+            processed_history = history[:-1]
+
+        chat_history = []
+        for msg in processed_history:
+            role = "user" if msg['sender'] == 'user' else "model"
+            chat_history.append(types.Content(role=role, parts=[types.Part.from_text(text=msg['text'])]))
+
+        # Stratégie de repli
+        models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-1.5-pro', 'gemini-pro-latest']
+        reply = None
+        last_err = ""
+
+        for model_id in models_to_try:
+            try:
+                chat_session = client.chats.create(
+                    model=model_id,
+                    config=types.GenerateContentConfig(system_instruction=system_instruction),
+                    history=chat_history
+                )
+                response = chat_session.send_message(user_message_raw)
+                reply = response.text
+                if reply: break
+            except Exception as e:
+                last_err = str(e)
+                print(f"⚠️ Échec Chatbot avec {model_id} : {last_err}")
+                continue
+
+        if not reply:
+            return jsonify({"reply": f"Désolé, mes services de réflexion sont saturés. ({last_err})"}), 500
 
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print(f"❌ ERREUR CRITIQUE CHATBOT: {str(e)}")
-        return jsonify({"reply": "Désolé, j'ai rencontré une erreur interne. Réessayez dans un instant."}), 500
+        print(f"❌ ERREUR CRITIQUE CHATBOT IA: {str(e)}")
+        return jsonify({"reply": "Désolé, j'ai rencontré une petite erreur technique. Pouvez-vous reformuler ?"}), 500
 
 # --- NEW ENDPOINT: ADVANCED AI BIAS DETECTION ---
 @app.route('/analyze-bias-ai', methods=['POST'])

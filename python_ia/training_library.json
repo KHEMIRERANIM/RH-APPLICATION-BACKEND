@@ -1,44 +1,66 @@
 [
   {
     "skill": "Docker",
-    "course_name": "Maîtriser la Conteneurisation avec Docker",
+    "course_name": "Maîtriser la Conteneurisation avec Docker et Kubernetes",
     "duration": "15 heures",
     "level": "Intermédiaire",
-    "link": "/formations/docker-base"
+    "link": "/formations/docker-base",
+    "description": "Apprenez à packager vos applications et à les déployer de manière isolée."
   },
   {
     "skill": "Kubernetes",
-    "course_name": "Orchestration Cloud avec K8s",
+    "course_name": "Orchestration Cloud avec K8s (EKS/GKE)",
     "duration": "20 heures",
     "level": "Avancé",
-    "link": "/formations/k8s-master"
+    "link": "/formations/k8s-master",
+    "description": "Gérez des clusters de conteneurs à grande échelle dans le cloud."
   },
   {
     "skill": "Angular",
-    "course_name": "Angular Pro : Signaux et SSR",
+    "course_name": "Angular Pro : Signaux, SSR et Architecture Standalone",
     "duration": "12 heures",
     "level": "Avancé",
-    "link": "/formations/angular-upgrade"
+    "link": "/formations/angular-upgrade",
+    "description": "Mise à jour vers les dernières fonctionnalités d'Angular pour des performances optimales."
   },
   {
     "skill": "Spring Boot",
-    "course_name": "Microservices avec Spring Boot 3",
+    "course_name": "Microservices et Sécurité avec Spring Boot 3",
     "duration": "18 heures",
     "level": "Intermédiaire",
-    "link": "/formations/spring-microservices"
+    "link": "/formations/spring-microservices",
+    "description": "Développez des backends robustes et sécurisés avec OAuth2 et Spring Security."
   },
   {
     "skill": "Leadership",
-    "course_name": "Devenir un Tech Lead Empathique",
+    "course_name": "Devenir un Tech Lead Empathique et RSE",
     "duration": "8 heures",
     "level": "Soft Skills",
-    "link": "/formations/leadership-rse"
+    "link": "/formations/leadership-rse",
+    "description": "Apprenez à gérer des équipes techniques tout en respectant les valeurs d'inclusion et de bien-être."
   },
   {
     "skill": "Python",
-    "course_name": "Python pour l'IA et la Data Science",
+    "course_name": "Python et IA Générative (LLM, RAG, LangChain)",
     "duration": "25 heures",
     "level": "Intermédiaire",
-    "link": "/formations/python-ia"
+    "link": "/formations/python-ia",
+    "description": "Construisez des agents intelligents en utilisant les dernières technologies de LLM."
+  },
+  {
+    "skill": "Green IT",
+    "course_name": "Éco-conception logicielle : Coder pour la planète",
+    "duration": "10 heures",
+    "level": "RSE",
+    "link": "/formations/green-it",
+    "description": "Réduisez l'empreinte carbone de vos applications par des optimisations algorithmiques."
+  },
+  {
+    "skill": "Agile",
+    "course_name": "Scrum Master et Facilitation Active",
+    "duration": "14 heures",
+    "level": "Méthodologie",
+    "link": "/formations/agile-master",
+    "description": "Maîtrisez les rituels agiles et boostez la vélocité de vos équipes."
   }
 ]
