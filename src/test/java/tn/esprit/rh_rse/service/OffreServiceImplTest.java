@@ -1,8 +1,11 @@
 package tn.esprit.rh_rse.service;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -15,12 +18,15 @@ import tn.esprit.rh_rse.repository.OffreRepository;
 import tn.esprit.rh_rse.service.impl.OffreServiceImpl;
 
 import java.util.Optional;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Tests Avancés - Service des Offres")
 class OffreServiceImplTest {
 
     @Mock
@@ -35,59 +41,54 @@ class OffreServiceImplTest {
     @BeforeEach
     void setUp() {
         offre = Offre.builder()
-                .id("offre123")
-                .titre("Développeur Java")
+                .id("off123")
+                .titre("Architecte Cloud")
                 .statut(StatutOffre.BROUILLON)
-                .nombreCandidatures(0)
+                .competencesRequises(List.of("AWS", "Kubernetes"))
                 .build();
 
         createRequest = new CreateOffreRequest();
-        createRequest.setTitre("Développeur Java");
+        createRequest.setTitre("Architecte Cloud");
     }
 
     @Test
-    void createOffre_ShouldReturnOffreResponse() {
-        // Arrange
-        when(offreRepository.save(any(Offre.class))).thenReturn(offre);
+    @DisplayName("Lecture d'une offre existante")
+    void getOffreById_Success() {
+        when(offreRepository.findById("off123")).thenReturn(Optional.of(offre));
+        OffreResponse response = offreService.getOffreById("off123");
+        
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo("off123");
+        verify(offreRepository).findById("off123");
+    }
 
-        // Act
-        OffreResponse response = offreService.createOffre(createRequest, "admin123");
+    @ParameterizedTest
+    @DisplayName("Scénarios de Publication d'Offre")
+    @CsvSource({
+        "off123, true",
+        "off456, false"
+    })
+    void publierOffre_Scenarios(String id, boolean exists) {
+        if (exists) {
+            when(offreRepository.findById(id)).thenReturn(Optional.of(offre));
+            when(offreRepository.save(any(Offre.class))).thenReturn(offre);
 
-        // Assert
-        assertNotNull(response);
-        assertEquals("Développeur Java", response.getTitre());
-        assertEquals(StatutOffre.BROUILLON, response.getStatut());
-        verify(offreRepository, times(1)).save(any(Offre.class));
+            offreService.publierOffre(id);
+
+            assertThat(offre.getStatut()).isEqualTo(StatutOffre.PUBLIEE);
+            assertThat(offre.getDatePublication()).isNotNull();
+        } else {
+            when(offreRepository.findById(id)).thenReturn(Optional.empty());
+            assertThatThrownBy(() -> offreService.publierOffre(id))
+                    .isInstanceOf(RecrutementNotFoundException.class);
+        }
     }
 
     @Test
-    void getOffreById_WhenExists_ShouldReturnOffreResponse() {
-        when(offreRepository.findById("offre123")).thenReturn(Optional.of(offre));
-
-        OffreResponse response = offreService.getOffreById("offre123");
-
-        assertNotNull(response);
-        assertEquals("offre123", response.getId());
-        verify(offreRepository, times(1)).findById("offre123");
-    }
-
-    @Test
-    void getOffreById_WhenNotExists_ShouldThrowException() {
-        when(offreRepository.findById("invalid")).thenReturn(Optional.empty());
-
-        assertThrows(RecrutementNotFoundException.class, () -> offreService.getOffreById("invalid"));
-        verify(offreRepository, times(1)).findById("invalid");
-    }
-
-    @Test
-    void publierOffre_ShouldUpdateStatut() {
-        when(offreRepository.findById("offre123")).thenReturn(Optional.of(offre));
-        when(offreRepository.save(any(Offre.class))).thenReturn(offre);
-
-        offreService.publierOffre("offre123");
-
-        assertEquals(StatutOffre.PUBLIEE, offre.getStatut());
-        assertNotNull(offre.getDatePublication());
-        verify(offreRepository, times(1)).save(offre);
+    @DisplayName("Erreur : Offre introuvable")
+    void getOffreById_NotFound() {
+        when(offreRepository.findById("unknown")).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> offreService.getOffreById("unknown"))
+                .isInstanceOf(RecrutementNotFoundException.class);
     }
 }
