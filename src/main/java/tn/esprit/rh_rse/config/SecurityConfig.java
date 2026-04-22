@@ -34,7 +34,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))  // ✅ Utilise notre bean CORS
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -46,11 +46,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/careers/**").permitAll()
-
-                        // ✅ Specific rules FIRST
                         .requestMatchers(HttpMethod.GET, "/api/mobility/*/analyze").permitAll()
 
-                        // ✅ General rules AFTER
+                        .requestMatchers("/api/rse/**").authenticated()
                         .requestMatchers("/api/mobility/**").authenticated()
                         .requestMatchers("/api/evolution_plans/**").authenticated()
                         .requestMatchers("/api/career-plans/**").authenticated()
@@ -62,19 +60,20 @@ public class SecurityConfig {
         return http.build();
     }
 
-    // =========================
-    // 🔥 CORS CONFIGURATION (CORRIGÉE)
-    // =========================
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Pour Angular en développement
-        configuration.setAllowedOriginPatterns(List.of("http://localhost:4200", "http://127.0.0.1:4200"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "http://localhost:4200",
+                "http://127.0.0.1:4200",
+                "http://localhost:5173",
+                "http://127.0.0.1:5173"
+        ));
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
-        configuration.setAllowCredentials(true);           // Important pour le token JWT
+        configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("Authorization"));
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

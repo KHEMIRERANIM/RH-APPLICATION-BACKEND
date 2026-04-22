@@ -30,7 +30,6 @@ public class User {
     private String adresse;
 
     private Role role;
-
     private UserStatus status;
 
     private String departement;
@@ -41,4 +40,11 @@ public class User {
     private LocalDateTime dateEmbauche;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    // Champs RSE
+    @Builder.Default
+    private int rsePoints = 0;
+
+    @Builder.Default
+    private String rseLevel = "Débutant";
 }
