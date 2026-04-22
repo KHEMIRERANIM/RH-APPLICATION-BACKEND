@@ -323,9 +323,7 @@ public class ReservationServiceImpl implements ReservationService {
         if (!ancienne.getEmployeId().equals(request.getEmployeId())) {
             throw new RuntimeException("Reservation ne correspond pas a l'employe");
         }
-        if (ancienne.getStatut() == StatutReservation.ANNULE) {
-            throw new RuntimeException("Ancienne reservation deja annulee");
-        }
+
         Trajet trajet = trajetRepository.findById(request.getNouveauTrajetId())
                 .orElseThrow(() -> new RuntimeException("Trajet introuvable"));
         if (trajet.getPlacesRestantes() <= 0) {

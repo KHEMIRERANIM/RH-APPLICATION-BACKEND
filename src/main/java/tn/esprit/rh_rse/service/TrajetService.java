@@ -14,4 +14,5 @@ public interface TrajetService {
     void delete(String id);
     void updateStatus(String id, StatutTrajet statut);
     List<Trajet> getByStatut(StatutTrajet statut);
+    void annulerTrajetConducteur(String trajetId);
 }

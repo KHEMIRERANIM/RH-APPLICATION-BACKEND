@@ -51,4 +51,9 @@ public class TrajetController {
     public void updateStatus(@PathVariable String id, @PathVariable StatutTrajet statut) {
         trajetService.updateStatus(id, statut);
     }
+
+    @PutMapping("/{id}/annuler-conducteur")
+    public void annulerTrajetConducteur(@PathVariable String id) {
+        trajetService.annulerTrajetConducteur(id);
+    }
 }

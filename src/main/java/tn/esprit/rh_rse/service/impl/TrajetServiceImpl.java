@@ -12,11 +12,19 @@ import tn.esprit.rh_rse.service.TrajetService;
 import java.time.LocalDate;
 import java.util.List;
 
+import tn.esprit.rh_rse.entity.Reservation;
+import tn.esprit.rh_rse.entity.enums.StatutReservation;
+import tn.esprit.rh_rse.entity.enums.TypeNotification;
+import tn.esprit.rh_rse.repository.ReservationRepository;
+import tn.esprit.rh_rse.service.NotificationService;
+
 @Service
 @RequiredArgsConstructor
 public class TrajetServiceImpl implements TrajetService {
 
     private final TrajetRepository trajetRepository;
+    private final ReservationRepository reservationRepository;
+    private final NotificationService notificationService;
 
     @Override
     public List<Trajet> getAll() {
@@ -81,5 +89,30 @@ public class TrajetServiceImpl implements TrajetService {
             if (t.getPrix() == null) t.setPrix(5.0);
         });
         return trajets;
+    }
+
+
+    @Override
+    @Transactional
+    public void annulerTrajetConducteur(String trajetId) {
+        Trajet trajet = trajetRepository.findById(trajetId)
+                .orElseThrow(() -> new RuntimeException("Trajet introuvable : " + trajetId));
+        trajet.setStatut(StatutTrajet.INACTIF);
+        trajetRepository.save(trajet);
+
+        List<Reservation> reservations = reservationRepository.findByTrajetId(trajetId);
+        for (Reservation res : reservations) {
+            if (res.getStatut() != StatutReservation.ANNULE) {
+                res.setStatut(StatutReservation.ANNULE);
+                reservationRepository.save(res);
+                notificationService.envoyerNotification(
+                        res.getEmployeId(),
+                        "SYSTEME",
+                        trajetId,
+                        TypeNotification.ALTERNATIVES_DISPONIBLES,
+                        "Le conducteur a annule le trajet. Consultez les alternatives disponibles."
+                );
+            }
+        }
     }
 }
