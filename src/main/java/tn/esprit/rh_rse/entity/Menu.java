@@ -30,5 +30,6 @@ public class Menu {
     private String statut;
 
     @Valid
+    @Builder.Default
     private List<Plat> plats = new ArrayList<>();
 }

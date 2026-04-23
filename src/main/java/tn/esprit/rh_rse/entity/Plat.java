@@ -25,6 +25,7 @@ public class Plat {
 
     private String image;
 
+    @Builder.Default
     private Boolean disponible = true;
 
     @NotNull(message = "La quantite est obligatoire")

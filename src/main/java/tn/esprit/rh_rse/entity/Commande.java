@@ -32,6 +32,7 @@ public class Commande {
     @JsonProperty("datePrete")
     private LocalDateTime datePrete;
 
+    @Builder.Default
     @Pattern(regexp = "en_attente|confirmee|prete|livree", message = "Statut invalide")
     private String statut = "en_attente";
 
@@ -42,6 +43,8 @@ public class Commande {
     private Double montantBrut;
 
     private String codeRetrait;
+    @Builder.Default
     private boolean reductionAppliquee = false;
+    @Builder.Default
     private double montantReduction = 0.0;
 }
