@@ -57,7 +57,6 @@ public class MenuServiceImpl implements MenuService {
         return menuRepository.save(menu);
     }
 
-    // ✅ NOUVELLE MÉTHODE (IMPORTANT)
     @Override
     public Menu updatePlat(String menuId, String platId, Plat platUpdated) {
         Menu menu = getById(menuId);
@@ -105,7 +104,7 @@ public class MenuServiceImpl implements MenuService {
         return menuRepository.findByStatut("publie");
     }
 
-    // --------- Nouveaux services ---------
+
     @Override
     public List<Plat> getPlatsByRegime(String menuId, String regime) {
         Menu menu = getById(menuId);

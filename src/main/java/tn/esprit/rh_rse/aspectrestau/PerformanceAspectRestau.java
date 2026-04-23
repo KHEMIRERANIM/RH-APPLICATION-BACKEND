@@ -33,7 +33,7 @@ public class PerformanceAspectRestau {
         } catch (Throwable ex) {
             long duree = System.currentTimeMillis() - debut;
             log.error("[AOP] ⚡ {} échoué après {} ms", pjp.getSignature().getName(), duree);
-            throw ex; // ✅ relancer pour que @AfterThrowing puisse l'attraper
+            throw ex; //
         }
     }
 }

@@ -19,7 +19,7 @@ public class Commande {
     @NotBlank(message = "L'identifiant de l'employé est obligatoire")
     private String userId;
 
-    private String nomEmploye;  //  ajouté — envoyé depuis le frontend
+    private String nomEmploye;
 
     @NotBlank(message = "L'identifiant du menu est obligatoire")
     private String menuId;

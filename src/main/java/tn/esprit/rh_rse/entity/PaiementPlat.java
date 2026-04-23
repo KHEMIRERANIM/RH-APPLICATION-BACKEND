@@ -26,10 +26,10 @@ public class PaiementPlat {
     private boolean reductionAppliquee;
     private int pointsGagnes;
 
-    // "especes" ou "salaire"
+
     private String modePaiement;
 
-    // "paye" ou "en_attente_integration" (pour déduction salaire)
+
     private String statut;
 
     private LocalDateTime datePaiement;

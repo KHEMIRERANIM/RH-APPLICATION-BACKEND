@@ -26,7 +26,7 @@ public class Avis {
     private Integer note;
 
     @Size(max = 500, message = "Le commentaire ne peut pas dépasser 500 caractères")
-    private String commentaire;     // optionnel
+    private String commentaire;
 
     @NotNull(message = "La date est obligatoire")
     private LocalDate date;

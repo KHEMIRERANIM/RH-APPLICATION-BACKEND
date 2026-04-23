@@ -21,10 +21,7 @@ public class CommandeScheduler {
     private static final long DELAI_EXPIRATION_MINUTES = 2;   // suppression après 1h
     private static final long DELAI_ALERTE_MINUTES     = 1;   // alerte préventive à 45min
 
-    /**
-     * Toutes les 2 minutes :
-     * Supprime les commandes "prete" non récupérées depuis plus d'1 heure
-     */
+
     @Scheduled(fixedRate = 30_000)
     public void supprimerCommandesExpirees() {
         LocalDateTime limite = LocalDateTime.now().minusMinutes(DELAI_EXPIRATION_MINUTES);
@@ -36,7 +33,7 @@ public class CommandeScheduler {
 
         if (!expirees.isEmpty()) {
             expirees.forEach(c -> {
-                log.warn("[Scheduler] ⛔ SUPPRESSION commande {} — prête depuis {} min — employé {} absent.",
+                log.warn("[Scheduler] SUPPRESSION commande {} — prête depuis {} min — employé {} absent.",
                         c.getId(),
                         Duration.between(c.getDatePrete(), LocalDateTime.now()).toMinutes(),
                         c.getUserId());
