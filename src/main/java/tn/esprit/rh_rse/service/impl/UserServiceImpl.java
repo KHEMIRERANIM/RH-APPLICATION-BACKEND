@@ -39,12 +39,14 @@ public class UserServiceImpl implements UserService {
                 .prenom(request.getPrenom())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
+                .telephone(request.getTelephone())
                 .role(request.getRole())
-                .status(UserStatus.ACTIF)
+                .status(request.getStatus() != null ? request.getStatus() : UserStatus.ACTIF)
                 .departement(request.getDepartement())
                 .poste(request.getPoste())
                 .managerId(request.getManagerId())
                 .photoUrl(request.getPhotoUrl())
+                .adresse(request.getAdresse())
                 .dateEmbauche(LocalDateTime.now())
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -79,10 +81,15 @@ public class UserServiceImpl implements UserService {
 
         if (request.getNom() != null) user.setNom(request.getNom());
         if (request.getPrenom() != null) user.setPrenom(request.getPrenom());
+        if (request.getEmail() != null) user.setEmail(request.getEmail());
+        if (request.getTelephone() != null) user.setTelephone(request.getTelephone());
         if (request.getDepartement() != null) user.setDepartement(request.getDepartement());
         if (request.getPoste() != null) user.setPoste(request.getPoste());
         if (request.getManagerId() != null) user.setManagerId(request.getManagerId());
         if (request.getPhotoUrl() != null) user.setPhotoUrl(request.getPhotoUrl());
+        if (request.getAdresse() != null) user.setAdresse(request.getAdresse());
+        if (request.getRole() != null) user.setRole(request.getRole());
+        if (request.getStatus() != null) user.setStatus(request.getStatus());
         user.setUpdatedAt(LocalDateTime.now());
 
         return toResponse(userRepository.save(user));
@@ -156,6 +163,7 @@ public class UserServiceImpl implements UserService {
                 .id(user.getId())
                 .nom(user.getNom())
                 .prenom(user.getPrenom())
+                .telephone(user.getTelephone())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .status(user.getStatus())
@@ -163,6 +171,7 @@ public class UserServiceImpl implements UserService {
                 .poste(user.getPoste())
                 .managerId(user.getManagerId())
                 .photoUrl(user.getPhotoUrl())
+                .adresse(user.getAdresse())
                 .dateEmbauche(user.getDateEmbauche())
                 .createdAt(user.getCreatedAt())
                 .build();

@@ -69,7 +69,7 @@ public class StatAvantageServiceImpl implements StatAvantageService {
         Aggregation aggregation = Aggregation.newAggregation(
                 Aggregation.match(Criteria.where("statut").is(StatutReservation.CONFIRMEE)),
                 Aggregation.addFields().addField("idOffreAvantageObj").withValueOfExpression("{ $toObjectId: '$idOffreAvantage' }").build(),
-                Aggregation.lookup("offres", "idOffreAvantageObj", "_id", "offre_docs"),
+                Aggregation.lookup("offre_avantages", "idOffreAvantageObj", "_id", "offre_docs"),
                 Aggregation.unwind("offre_docs"),
                 Aggregation.group("offre_docs.categorie").count().as("count"),
                 Aggregation.project("count").and("_id").as("categorie")

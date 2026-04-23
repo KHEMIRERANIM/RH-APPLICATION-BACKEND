@@ -34,6 +34,7 @@ public class SecurityConfig {
                         // Public
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/commandes/export/**").permitAll()
 
                         // Users — Admin only
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
