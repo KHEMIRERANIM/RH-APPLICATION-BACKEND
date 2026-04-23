@@ -21,6 +21,7 @@ public interface DemandeCongeRepository extends MongoRepository<DemandeConge, St
 
     List<DemandeConge> findByEmployeIdAndDateDebutBetween(String employeId, LocalDate debut, LocalDate fin);
 
+    List<DemandeConge> findByStatut(StatutConge statut);
     // Pour la détection de tendances : récupérer toutes les demandes approuvées d'un employé
     List<DemandeConge> findByEmployeIdAndStatut(String employeId, StatutConge statut, org.springframework.data.domain.Sort sort);
 }

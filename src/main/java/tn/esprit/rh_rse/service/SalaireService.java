@@ -20,4 +20,5 @@ public interface SalaireService {
     BulletinSalaireResponse modifierBulletin(String id, BulletinSalaireRequest request);
 
     void supprimerBulletin(String id);
+    List<BulletinSalaireResponse> getAllBulletins();
 }

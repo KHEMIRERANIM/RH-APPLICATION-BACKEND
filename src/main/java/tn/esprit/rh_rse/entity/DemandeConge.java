@@ -29,6 +29,10 @@ public class DemandeConge {
     private String motif;
     private TypeConge type;
 
+
+    private String documentUrl;
+    private String documentType; // CERTIFICAT_MEDICAL, AUTRE
+
     @Builder.Default
     private StatutConge statut = StatutConge.EN_ATTENTE;
 

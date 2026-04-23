@@ -1,5 +1,6 @@
 package tn.esprit.rh_rse.service.impl;
 
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -55,10 +56,15 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserResponse> getAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
+        try {
+            return userRepository.findAll()
+                    .stream()
+                    .map(this::toResponse)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Erreur: " + e.getMessage());
+        }
     }
 
     @Override
@@ -161,4 +167,7 @@ public class UserServiceImpl implements UserService {
     public void deleteUser(String id) {
         userRepository.deleteById(id);
     }
+
+    @PostConstruct
+    public void generatePassword() { System.out.println(passwordEncoder.encode("admin123")); }
 }

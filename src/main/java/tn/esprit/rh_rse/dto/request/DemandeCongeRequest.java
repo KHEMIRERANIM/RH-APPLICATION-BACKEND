@@ -13,4 +13,6 @@ public class DemandeCongeRequest {
     private LocalDate dateFin;
     private String motif;
     private TypeConge type;
+    private String documentUrl;
+    private String documentType; // CERTIFICAT_MEDICAL, AUTRE
 }

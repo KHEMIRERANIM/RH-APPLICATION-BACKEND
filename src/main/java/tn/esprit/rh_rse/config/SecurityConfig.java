@@ -36,15 +36,38 @@ public class SecurityConfig {
                 .exceptionHandling(ex ->
                         ex.authenticationEntryPoint(jwtAuthEntryPoint))
                 .authorizeHttpRequests(auth -> auth
-                        // Public
+
+                        // ── PUBLIC ─────────────────────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
-                        // Admin seulement
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+                        .requestMatchers("/api/chatbot/**").permitAll()
+                        // ── USERS (Admin seulement) ────────────────────────
+                        .requestMatchers(HttpMethod.GET,  "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/department/**").hasRole("ADMIN")
-                        // Admin ou Employé — tout le reste
+                        .requestMatchers(HttpMethod.GET,  "/api/users/role/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,  "/api/users/department/**").hasRole("ADMIN")
                         .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "EMPLOYE")
+
+                        // ── SALAIRES ────────────────────────────────────────
+                        // Admin peut tout faire
+                        .requestMatchers(HttpMethod.POST, "/api/salaires").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT,  "/api/salaires/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/salaires/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET,  "/api/salaires").hasRole("ADMIN")
+                        // 🔥 NOUVEAU : Employé peut voir ses bulletins
+                        .requestMatchers(HttpMethod.GET,  "/api/salaires/employe/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET,  "/api/salaires/{id}").hasAnyRole("ADMIN", "EMPLOYE")
+
+                        // ── CONGES MANAGER (Admin joue le role manager) ────
+                        .requestMatchers("/api/conges/manager/**").hasRole("ADMIN")
+
+                        // ── CONGES EMPLOYE (Employe + Admin) ──────────────
+                        .requestMatchers(HttpMethod.POST,   "/api/conges").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET,    "/api/conges/employe/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET,    "/api/conges/solde/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET,    "/api/conges/{id}").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/conges/**").hasAnyRole("ADMIN", "EMPLOYE")
+
+                        // ── TOUT LE RESTE : authentifié ───────────────────
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

@@ -2,6 +2,7 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 import tn.esprit.rh_rse.dto.request.DemandeCongeRequest;
 import tn.esprit.rh_rse.dto.request.ValidationCongeRequest;
 import tn.esprit.rh_rse.dto.response.DemandeCongeResponse;
@@ -11,8 +12,13 @@ import tn.esprit.rh_rse.entity.SoldeConge;
 import tn.esprit.rh_rse.entity.enums.StatutConge;
 import tn.esprit.rh_rse.repository.DemandeCongeRepository;
 import tn.esprit.rh_rse.repository.SoldeCongeRepository;
+import tn.esprit.rh_rse.repository.UserRepository;
 import tn.esprit.rh_rse.service.CongeService;
+import tn.esprit.rh_rse.service.EmailService;
+import tn.esprit.rh_rse.service.FileStorageService;
+import tn.esprit.rh_rse.service.NotificationService;
 
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +31,10 @@ public class CongeServiceImpl implements CongeService {
 
     private final DemandeCongeRepository demandeCongeRepository;
     private final SoldeCongeRepository soldeCongeRepository;
+    private final NotificationService notificationService;
+    private final EmailService emailService;
+    private final UserRepository userRepository;
+    private final FileStorageService fileStorageService;  // ← Ajouter cette ligne
 
     // ─────────────────────────────────────────────────────────────
     //  EMPLOYE
@@ -32,10 +42,8 @@ public class CongeServiceImpl implements CongeService {
 
     @Override
     public DemandeCongeResponse soumettreDemande(DemandeCongeRequest request) {
-        // Calculer le nombre de jours (sans week-end)
         int nombreJours = calculerJoursOuvrables(request.getDateDebut(), request.getDateFin());
 
-        // Vérifier le solde disponible
         int annee = request.getDateDebut().getYear();
         SoldeConge solde = getOrCreateSolde(request.getEmployeId(), annee);
 
@@ -44,7 +52,10 @@ public class CongeServiceImpl implements CongeService {
                     + solde.getJoursRestants() + " jours, Demandé: " + nombreJours + " jours.");
         }
 
-        // Créer la demande
+        String employeNom = userRepository.findById(request.getEmployeId())
+                .map(u -> u.getPrenom() + " " + u.getNom())
+                .orElse(request.getEmployeId());
+
         DemandeConge demande = DemandeConge.builder()
                 .employeId(request.getEmployeId())
                 .managerId(request.getManagerId())
@@ -60,11 +71,16 @@ public class CongeServiceImpl implements CongeService {
 
         DemandeConge saved = demandeCongeRepository.save(demande);
 
-        // Mettre à jour le solde (jours en attente)
         solde.setJoursEnAttente(solde.getJoursEnAttente() + nombreJours);
         solde.setJoursRestants(solde.getJoursTotal() - solde.getJoursUtilises() - solde.getJoursEnAttente());
         solde.setUpdatedAt(LocalDateTime.now());
         soldeCongeRepository.save(solde);
+
+        try {
+            notificationService.notifierNouvelleDemande(employeNom, nombreJours);
+        } catch (Exception e) {
+            System.err.println("❌ Erreur notification: " + e.getMessage());
+        }
 
         return toResponse(saved);
     }
@@ -97,7 +113,6 @@ public class CongeServiceImpl implements CongeService {
         demande.setUpdatedAt(LocalDateTime.now());
         demandeCongeRepository.save(demande);
 
-        // Libérer les jours en attente dans le solde
         int annee = demande.getDateDebut().getYear();
         SoldeConge solde = getOrCreateSolde(demande.getEmployeId(), annee);
         solde.setJoursEnAttente(Math.max(0, solde.getJoursEnAttente() - demande.getNombreJours()));
@@ -109,7 +124,41 @@ public class CongeServiceImpl implements CongeService {
     @Override
     public SoldeCongeResponse getSoldeConge(String employeId) {
         int annee = LocalDate.now().getYear();
-        SoldeConge solde = getOrCreateSolde(employeId, annee);
+
+        List<DemandeConge> demandesApprouvees = demandeCongeRepository
+                .findByEmployeIdAndStatut(employeId, StatutConge.APPROUVE);
+
+        int joursUtilises = demandesApprouvees.stream()
+                .mapToInt(DemandeConge::getNombreJours)
+                .sum();
+
+        List<DemandeConge> demandesEnAttente = demandeCongeRepository
+                .findByEmployeIdAndStatut(employeId, StatutConge.EN_ATTENTE);
+
+        int joursEnAttente = demandesEnAttente.stream()
+                .mapToInt(DemandeConge::getNombreJours)
+                .sum();
+
+        SoldeConge solde = soldeCongeRepository.findByEmployeIdAndAnnee(employeId, annee)
+                .orElseGet(() -> {
+                    SoldeConge newSolde = SoldeConge.builder()
+                            .employeId(employeId)
+                            .annee(annee)
+                            .joursTotal(30)
+                            .joursUtilises(0)
+                            .joursEnAttente(0)
+                            .joursRestants(30)
+                            .updatedAt(LocalDateTime.now())
+                            .build();
+                    return soldeCongeRepository.save(newSolde);
+                });
+
+        solde.setJoursUtilises(joursUtilises);
+        solde.setJoursEnAttente(joursEnAttente);
+        solde.setJoursRestants(solde.getJoursTotal() - joursUtilises - joursEnAttente);
+        solde.setUpdatedAt(LocalDateTime.now());
+        soldeCongeRepository.save(solde);
+
         return toSoldeResponse(solde);
     }
 
@@ -135,32 +184,76 @@ public class CongeServiceImpl implements CongeService {
 
     @Override
     public DemandeCongeResponse validerDemande(String id, ValidationCongeRequest request) {
-        DemandeConge demande = demandeCongeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Demande introuvable avec id: " + id));
+        try {
+            System.out.println("=== DÉBUT VALIDATION ===");
+            System.out.println("ID: " + id);
 
-        if (!demande.getStatut().equals(StatutConge.EN_ATTENTE)) {
-            throw new RuntimeException("Cette demande a déjà été traitée.");
+            DemandeConge demande = demandeCongeRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Demande introuvable avec id: " + id));
+
+            System.out.println("Statut actuel: " + demande.getStatut());
+
+            if (!demande.getStatut().equals(StatutConge.EN_ATTENTE)) {
+                throw new RuntimeException("Cette demande a déjà été traitée.");
+            }
+
+            demande.setStatut(request.getStatut());
+            demande.setCommentaireManager(request.getCommentaireManager());
+            demande.setUpdatedAt(LocalDateTime.now());
+            DemandeConge saved = demandeCongeRepository.save(demande);
+
+            System.out.println("✅ Demande sauvegardée");
+
+            // Mettre à jour le solde
+            int annee = demande.getDateDebut().getYear();
+            SoldeConge solde = getOrCreateSolde(demande.getEmployeId(), annee);
+
+            if (request.getStatut().equals(StatutConge.APPROUVE)) {
+                solde.setJoursUtilises(solde.getJoursUtilises() + demande.getNombreJours());
+            }
+            solde.setJoursEnAttente(Math.max(0, solde.getJoursEnAttente() - demande.getNombreJours()));
+            solde.setJoursRestants(solde.getJoursTotal() - solde.getJoursUtilises() - solde.getJoursEnAttente());
+            solde.setUpdatedAt(LocalDateTime.now());
+            soldeCongeRepository.save(solde);
+
+            System.out.println("✅ Solde mis à jour");
+
+            // Notification WebSocket
+            try {
+                notificationService.notifierValidationCongé(
+                        demande.getEmployeId(),
+                        request.getStatut().toString(),
+                        request.getCommentaireManager()
+                );
+                System.out.println("✅ Notification envoyée");
+            } catch (Exception e) {
+                System.err.println("❌ Erreur notification: " + e.getMessage());
+            }
+
+            // Email (commenté temporairement)
+             try {
+                emailService.envoyerEmailValidation(
+                         demande.getEmployeId(),
+                         request.getStatut().toString(),
+                         request.getCommentaireManager(),
+                         demande.getDateDebut(),
+                         demande.getDateFin()
+                 );
+             } catch (Exception e) {
+                 System.err.println("❌ Erreur email: " + e.getMessage());
+             }
+
+            System.out.println("=== FIN VALIDATION ===");
+
+            return toResponse(saved);
+
+        } catch (Exception e) {
+            System.err.println("❌ ERREUR VALIDATION: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
         }
 
-        demande.setStatut(request.getStatut());
-        demande.setCommentaireManager(request.getCommentaireManager());
-        demande.setUpdatedAt(LocalDateTime.now());
-        demandeCongeRepository.save(demande);
 
-        // Mettre à jour le solde selon la décision
-        int annee = demande.getDateDebut().getYear();
-        SoldeConge solde = getOrCreateSolde(demande.getEmployeId(), annee);
-
-        if (request.getStatut().equals(StatutConge.APPROUVE)) {
-            solde.setJoursUtilises(solde.getJoursUtilises() + demande.getNombreJours());
-        }
-        // Dans les deux cas (APPROUVE ou REFUSE), on retire des jours en attente
-        solde.setJoursEnAttente(Math.max(0, solde.getJoursEnAttente() - demande.getNombreJours()));
-        solde.setJoursRestants(solde.getJoursTotal() - solde.getJoursUtilises() - solde.getJoursEnAttente());
-        solde.setUpdatedAt(LocalDateTime.now());
-        soldeCongeRepository.save(solde);
-
-        return toResponse(demande);
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -168,10 +261,17 @@ public class CongeServiceImpl implements CongeService {
     // ─────────────────────────────────────────────────────────────
 
     @Override
+    public List<DemandeCongeResponse> getAllDemandes() {
+        return demandeCongeRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Map<String, Object> detecterTendances(String managerId) {
         List<DemandeConge> demandes = demandeCongeRepository.findByManagerId(managerId);
 
-        // Grouper par employé
         Map<String, List<DemandeConge>> parEmploye = demandes.stream()
                 .filter(d -> d.getStatut().equals(StatutConge.APPROUVE)
                         || d.getStatut().equals(StatutConge.EN_ATTENTE))
@@ -183,14 +283,12 @@ public class CongeServiceImpl implements CongeService {
             String employeId = entry.getKey();
             List<DemandeConge> demandesEmploye = entry.getValue();
 
-            // Compter les jours de début par jour de la semaine
             Map<DayOfWeek, Long> compteurJours = demandesEmploye.stream()
                     .collect(Collectors.groupingBy(
                             d -> d.getDateDebut().getDayOfWeek(),
                             Collectors.counting()
                     ));
 
-            // Alerte si un jour précis revient 3 fois ou plus
             for (Map.Entry<DayOfWeek, Long> jour : compteurJours.entrySet()) {
                 if (jour.getValue() >= 3) {
                     Map<String, Object> alerte = new HashMap<>();
@@ -204,7 +302,6 @@ public class CongeServiceImpl implements CongeService {
                 }
             }
 
-            // Alerte si trop de demandes sur une courte période (plus de 5 en 30 jours)
             if (demandesEmploye.size() >= 5) {
                 LocalDate today = LocalDate.now();
                 long recentCount = demandesEmploye.stream()
@@ -288,5 +385,81 @@ public class CongeServiceImpl implements CongeService {
                 .joursEnAttente(s.getJoursEnAttente())
                 .joursRestants(s.getJoursRestants())
                 .build();
+    }
+
+    @Override
+    public List<DemandeCongeResponse> getAllDemandesEnAttente() {
+        return demandeCongeRepository.findByStatut(StatutConge.EN_ATTENTE)
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void supprimerDemande(String id) {
+        if (!demandeCongeRepository.existsById(id)) {
+            throw new RuntimeException("Demande introuvable avec id: " + id);
+        }
+        demandeCongeRepository.deleteById(id);
+    }
+
+    @Override
+    public DemandeCongeResponse modifierDemande(String id, DemandeCongeRequest request) {
+        DemandeConge demande = demandeCongeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Demande introuvable avec id: " + id));
+
+        if (!demande.getStatut().equals(StatutConge.EN_ATTENTE)) {
+            throw new RuntimeException("Impossible de modifier une demande déjà traitée.");
+        }
+
+        demande.setType(request.getType());
+        demande.setDateDebut(request.getDateDebut());
+        demande.setDateFin(request.getDateFin());
+        demande.setMotif(request.getMotif());
+
+        int nouveauNombreJours = calculerJoursOuvrables(request.getDateDebut(), request.getDateFin());
+        int ancienNombreJours = demande.getNombreJours();
+
+        if (nouveauNombreJours != ancienNombreJours) {
+            int annee = request.getDateDebut().getYear();
+            SoldeConge solde = getOrCreateSolde(demande.getEmployeId(), annee);
+
+            solde.setJoursEnAttente(solde.getJoursEnAttente() - ancienNombreJours + nouveauNombreJours);
+            solde.setJoursRestants(solde.getJoursTotal() - solde.getJoursUtilises() - solde.getJoursEnAttente());
+            solde.setUpdatedAt(LocalDateTime.now());
+            soldeCongeRepository.save(solde);
+
+            demande.setNombreJours(nouveauNombreJours);
+        }
+
+        demande.setUpdatedAt(LocalDateTime.now());
+        DemandeConge saved = demandeCongeRepository.save(demande);
+
+        return toResponse(saved);
+    }
+
+    @Override
+    public DemandeCongeResponse soumettreDemandeWithFile(DemandeCongeRequest request, MultipartFile document) {
+        // Créer la demande normalement
+        DemandeCongeResponse response = soumettreDemande(request);
+
+        // Sauvegarder le fichier si présent
+        if (document != null && !document.isEmpty()) {
+            try {
+                String fileName = fileStorageService.saveFile(document, response.getId());
+
+                // Mettre à jour la demande avec l'URL du document
+                DemandeConge demande = demandeCongeRepository.findById(response.getId()).get();
+                demande.setDocumentUrl(fileName);
+                demande.setDocumentType(document.getContentType());
+                demandeCongeRepository.save(demande);
+
+                System.out.println("✅ Fichier sauvegardé: " + fileName);
+            } catch (IOException e) {
+                System.err.println("❌ Erreur sauvegarde fichier: " + e.getMessage());
+            }
+        }
+
+        return response;
     }
 }

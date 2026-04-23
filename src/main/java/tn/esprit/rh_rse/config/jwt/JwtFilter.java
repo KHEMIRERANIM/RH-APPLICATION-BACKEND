@@ -35,6 +35,11 @@ public class JwtFilter extends OncePerRequestFilter {
                 String email = jwtUtil.extractEmail(token);
                 String role = jwtUtil.extractRole(token);
 
+                // 🔥 LOG POUR VOIR LE RÔLE
+                System.out.println("🔐 JWT Filter - Email: " + email);
+                System.out.println("🔐 JWT Filter - Rôle extrait: " + role);
+                System.out.println("🔐 JWT Filter - URL: " + request.getRequestURI());
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 email,

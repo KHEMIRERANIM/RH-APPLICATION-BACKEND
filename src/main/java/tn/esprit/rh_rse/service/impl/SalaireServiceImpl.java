@@ -76,7 +76,13 @@ public class SalaireServiceImpl implements SalaireService {
         BulletinSalaire saved = bulletinSalaireRepository.save(updated);
         return toResponse(saved);
     }
-
+    @Override
+    public List<BulletinSalaireResponse> getAllBulletins() {
+        return bulletinSalaireRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
     @Override
     public void supprimerBulletin(String id) {
         if (!bulletinSalaireRepository.existsById(id)) {
