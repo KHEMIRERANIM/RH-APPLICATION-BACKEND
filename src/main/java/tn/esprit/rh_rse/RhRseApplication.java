@@ -5,6 +5,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.data.mongodb.config.EnableMongoAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@EnableScheduling
 @EnableMongoAuditing
 @SpringBootApplication
 @EnableScheduling

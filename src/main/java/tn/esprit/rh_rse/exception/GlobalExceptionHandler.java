@@ -22,6 +22,24 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    // NOUVEAU
+    @ExceptionHandler(OffreAvantageNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleOffreNotFound(OffreAvantageNotFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    // NOUVEAU
+    @ExceptionHandler(PartenaireNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handlePartenaireNotFound(PartenaireNotFoundException ex) {
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    // NOUVEAU
+    @ExceptionHandler(PlacesIndisponiblesException.class)
+    public ResponseEntity<Map<String, Object>> handlePlacesIndisponibles(PlacesIndisponiblesException ex) {
+        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         ex.printStackTrace(); // Log the exact error in IntelliJ
