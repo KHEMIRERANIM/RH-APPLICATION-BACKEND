@@ -322,7 +322,7 @@ public class CareerPlanService {
         Files.write(filePath, file.getBytes());
 
         target.setFichierNom(originalName);
-        target.setFichierUrl("/api/evolution-plans/files/" + uniqueName);
+        target.setFichierUrl("/api/evolution_plans/files/" + uniqueName);
 
         if (CertificationStatus.NON_COMMENCE.equals(target.getStatut())) {
             target.setStatut(CertificationStatus.EN_COURS);
@@ -334,7 +334,7 @@ public class CareerPlanService {
 
         return Map.of(
                 "fileName", originalName != null ? originalName : uniqueName,
-                "fileUrl", "/api/evolution-plans/files/" + uniqueName,
+                "fileUrl", "/api/evolution_plans/files/" + uniqueName,
                 "message", "Fichier uploadé avec succès"
         );
     }

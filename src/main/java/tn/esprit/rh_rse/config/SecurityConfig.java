@@ -48,6 +48,13 @@ public class SecurityConfig {
                         .requestMatchers("/api/careers/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/mobility/*/analyze").permitAll()
 
+                        // fichiers statiques publics
+                        .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/favicon.ico").permitAll()
+
+                        // ✅ CORRECTION : fichiers de certifications accessibles sans token
+                        .requestMatchers(HttpMethod.GET, "/api/evolution_plans/files/**").permitAll()
+
                         .requestMatchers("/api/rse/**").authenticated()
                         .requestMatchers("/api/mobility/**").authenticated()
                         .requestMatchers("/api/evolution_plans/**").authenticated()

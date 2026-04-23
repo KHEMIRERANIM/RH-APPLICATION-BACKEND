@@ -85,6 +85,7 @@ public class RseEmployeeController {
                             user != null ? user.getNom() : null,
                             user != null ? user.getPrenom() : null,
                             user != null ? user.getEmail() : null,
+                            user != null ? user.getPhotoUrl() : null,
                             action.getType(),
                             action.getDescription(),
                             action.getStatus(),

@@ -44,7 +44,6 @@ public class RseAdminController {
 
     @PutMapping("/validate/{id}")
     public ValidationResponse validateAction(@PathVariable String id) {
-
         RseAction action = actionRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Action introuvable"));
 
@@ -56,7 +55,6 @@ public class RseAdminController {
         }
 
         int points = rseService.calculatePoints(action.getType());
-
         user.setRsePoints(user.getRsePoints() + points);
 
         String level = levelService.getLevel(user.getRsePoints());
@@ -106,6 +104,7 @@ public class RseAdminController {
                 user != null ? user.getNom() : null,
                 user != null ? user.getPrenom() : null,
                 user != null ? user.getEmail() : null,
+                user != null ? user.getPhotoUrl() : null,
                 action.getType(),
                 action.getDescription(),
                 action.getStatus(),

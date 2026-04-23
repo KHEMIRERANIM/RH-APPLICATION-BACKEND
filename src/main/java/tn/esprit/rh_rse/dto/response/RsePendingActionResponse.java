@@ -16,6 +16,7 @@ public class RsePendingActionResponse {
     private String nom;
     private String prenom;
     private String email;
+    private String photoUrl;
     private String type;
     private String description;
     private String status;
