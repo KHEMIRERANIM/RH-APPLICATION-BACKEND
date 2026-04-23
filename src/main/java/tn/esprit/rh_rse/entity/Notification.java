@@ -8,7 +8,7 @@ import tn.esprit.rh_rse.entity.enums.TypeNotification;
 
 import java.time.LocalDateTime;
 
-@Document(collection = "notifications")
+@Document(collection = "notificationstransport")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
