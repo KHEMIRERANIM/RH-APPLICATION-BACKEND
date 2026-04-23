@@ -56,6 +56,8 @@ public class SecurityConfig {
                         .requestMatchers("/ws-tracking/**").permitAll()
                         .requestMatchers("/api/paiement/**").permitAll()
                         .requestMatchers("/api/prediction/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres/**").permitAll()
 
                         // Users – Admin only
                         .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("ADMIN", "EMPLOYE")

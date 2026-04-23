@@ -21,6 +21,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleEmailExists(EmailAlreadyExistsException ex) {
         return buildError(HttpStatus.CONFLICT, ex.getMessage());
     }
+    // Ajoute cette méthode dans ton GlobalExceptionHandler.java existant
+    @ExceptionHandler(RecrutementNotFoundException.class)
+    public ResponseEntity<String> handleRecrutementNotFound(RecrutementNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
+    }
 
     // NOUVEAU
     @ExceptionHandler(OffreAvantageNotFoundException.class)
