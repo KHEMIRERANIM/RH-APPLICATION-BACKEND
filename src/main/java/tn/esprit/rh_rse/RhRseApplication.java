@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 @EnableMongoAuditing
 @SpringBootApplication
-@EnableScheduling
 public class RhRseApplication {
 
     public static void main(String[] args) {
