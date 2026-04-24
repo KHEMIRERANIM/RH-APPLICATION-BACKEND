@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -24,23 +23,18 @@ public class OllamaService {
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
 
-    @Value("${ollama.url}")
-    private String ollamaUrl;
-
-    @Value("${ollama.model}")
-    private String model;
-
-    @Value("${ollama.temperature}")
-    private double temperature;
-
-    @Value("${ollama.max-tokens}")
-    private int maxTokens;
+    // VALEURS HARDCODEES DIRECTEMENT
+    private String ollamaUrl = "http://localhost:11434";
+    private String model = "llama2";
+    private double temperature = 0.7;
+    private int maxTokens = 500;
 
     private WebClient webClient;
     private final Map<String, List<Map<String, String>>> conversationHistory = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void init() {
+        log.info("Initializing OllamaService with URL: {}, Model: {}", ollamaUrl, model);
         this.webClient = webClientBuilder
                 .baseUrl(ollamaUrl)
                 .build();
@@ -81,16 +75,14 @@ public class OllamaService {
     public String buildPrompt(String question, List<FormationKnowledge> context, String sessionId) {
         StringBuilder prompt = new StringBuilder();
 
-        // Contexte système
         prompt.append("Tu es un assistant spécialisé dans les formations professionnelles. ");
         prompt.append("Réponds uniquement en français, de manière précise et professionnelle.\n\n");
 
-        // Historique de conversation (contexte)
         List<Map<String, String>> history = conversationHistory.getOrDefault(sessionId, List.of());
         if (!history.isEmpty()) {
             prompt.append("Historique de la conversation récente:\n");
             history.stream()
-                    .skip(Math.max(0, history.size() - 5)) // Derniers 5 échanges
+                    .skip(Math.max(0, history.size() - 5))
                     .forEach(exchange -> {
                         prompt.append("Utilisateur: ").append(exchange.get("question")).append("\n");
                         prompt.append("Assistant: ").append(exchange.get("answer")).append("\n");
@@ -98,7 +90,6 @@ public class OllamaService {
             prompt.append("\n");
         }
 
-        // Contexte de la base de connaissances
         prompt.append("Voici les formations disponibles dans notre catalogue:\n\n");
         for (int i = 0; i < context.size(); i++) {
             FormationKnowledge f = context.get(i);
@@ -109,7 +100,6 @@ public class OllamaService {
             prompt.append("   Durée: ").append(f.getDureeHeures()).append(" heures\n\n");
         }
 
-        // Question de l'utilisateur
         prompt.append("Question de l'utilisateur: ").append(question).append("\n\n");
         prompt.append("Réponse: ");
 
@@ -120,7 +110,6 @@ public class OllamaService {
         conversationHistory.computeIfAbsent(sessionId, k -> new java.util.ArrayList<>())
                 .add(Map.of("question", question, "answer", answer));
 
-        // Limiter l'historique à 20 échanges pour éviter la surcharge mémoire
         List<Map<String, String>> history = conversationHistory.get(sessionId);
         if (history.size() > 20) {
             history.subList(0, history.size() - 20).clear();
