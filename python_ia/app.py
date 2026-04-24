@@ -1,16 +1,27 @@
+import sys
+import traceback
+import io
+import os
+import re
+import json
+import random
+import urllib.request
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-import random
-import json
-import os
-import re
-import io
-import urllib.request
 from PyPDF2 import PdfReader
 from google import genai
 from google.genai import types
+
+# For Windows console encoding
+if sys.platform == "win32":
+    try:
+        import io
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+    except Exception:
+        pass
 
 # --- LOADING KNOWLEDGE BASE ---
 BASE_DIR = os.path.dirname(__file__)
@@ -28,12 +39,21 @@ ENGLISH_REFERENCE = load_json('english_reference.json')
 AMBASSADEURS = load_json('ambassadeurs.json')
 
 app = Flask(__name__)
-CORS(app) # Autorise les requêtes depuis localhost:4200 (Angular)
+CORS(app, resources={r"/*": {"origins": "*"}}) # Autorise Angular et autres
 MAX_CV_BYTES = 5 * 1024 * 1024
 
 # --- CONFIGURATION GEMINI AI ---
-GEMINI_API_KEY = "AIzaSyCo8bCcvfZKi_DKCgKZNGqTS43UpQBNzMU"
+GEMINI_API_KEY = "AIzaSyATWH3G3mB8NyyfDSpGii5jc7UKst_4iM4"
 client = genai.Client(api_key=GEMINI_API_KEY)
+
+# Modèles triés par priorité (Noms exacts détectés dans votre terminal)
+MODELS_PRIORITY = [
+    'models/gemini-1.5-flash',
+    'models/gemini-2.0-flash',
+    'models/gemini-flash-latest',
+    'models/gemini-1.5-pro',
+    'models/gemini-pro-latest'
+]
 
 # VRAI DATASET (CORPUS D'ENTRAINEMENT) : Ce que cherche l'entreprise
 IDEAL_BUSINESS_CORPUS = [
@@ -291,7 +311,7 @@ def analyze_speech():
 @app.route('/chat-coach', methods=['POST'])
 def chat_coach():
     try:
-        data = request.json
+        data = request.json or {}
         user_message_raw = data.get('message', '')
         candidat_name = data.get('fullname', 'Candidat')
         offre_title = data.get('offreTitle', 'un poste')
@@ -342,13 +362,13 @@ def chat_coach():
             role = "user" if msg['sender'] == 'user' else "model"
             chat_history.append(types.Content(role=role, parts=[types.Part.from_text(text=msg['text'])]))
 
-        # Stratégie de repli
-        models_to_try = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-flash-latest', 'gemini-1.5-pro', 'gemini-pro-latest']
+        # Stratégie de repli automatique
         reply = None
         last_err = ""
 
-        for model_id in models_to_try:
+        for model_id in MODELS_PRIORITY:
             try:
+                # Création de la session avec le modèle actuel
                 chat_session = client.chats.create(
                     model=model_id,
                     config=types.GenerateContentConfig(system_instruction=system_instruction),
@@ -356,19 +376,31 @@ def chat_coach():
                 )
                 response = chat_session.send_message(user_message_raw)
                 reply = response.text
-                if reply: break
+                if reply: 
+                    print(f"✅ Chatbot : Succès avec {model_id}")
+                    break
             except Exception as e:
                 last_err = str(e)
-                print(f"⚠️ Échec Chatbot avec {model_id} : {last_err}")
+                print(f"⚠️ Chatbot : Échec avec {model_id} (Quota ou indisponibilité)")
                 continue
 
         if not reply:
-            return jsonify({"reply": f"Désolé, mes services de réflexion sont saturés. ({last_err})"}), 500
+            print(f"❌ AUCUN MODÈLE N'A RÉPONDU (Quota épuisé). Passage en mode local.")
+            # Fallback sur une réponse basée sur les connaissances locales
+            intent = "amelioration" # Par défaut
+            reply = "Désolé, je rencontre une forte affluence. En attendant, je peux vous dire que chez RH_RSE, nous valorisons l'inclusion et le talent. N'hésitez pas à consulter nos offres ou à revenir vers moi dans quelques instants !"
+            
+            # Tentative de réponse plus précise via les fichiers JSON locaux
+            for key in KNOWLEDGE_BASE.get('faq', {}):
+                if key.lower() in user_message_raw.lower():
+                    reply = KNOWLEDGE_BASE['faq'][key]
+                    break
 
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print(f"❌ ERREUR CRITIQUE CHATBOT IA: {str(e)}")
+        print(f"❌ ERREUR CRITIQUE CHATBOT IA:")
+        traceback.print_exc()
         return jsonify({"reply": "Désolé, j'ai rencontré une petite erreur technique. Pouvez-vous reformuler ?"}), 500
 
 # --- NEW ENDPOINT: ADVANCED AI BIAS DETECTION ---
@@ -400,24 +432,22 @@ def analyze_bias_ai():
         }}
         """
 
-        # Liste de modèles à tester par ordre de priorité (pour contourner les limites de quota)
-        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-flash-latest', 'gemini-pro-latest', 'gemini-2.0-flash']
+        # Liste de modèles à tester par ordre de priorité
         response = None
         last_error = ""
 
-        for model_id in models_to_try:
+        for model_id in MODELS_PRIORITY:
             try:
-                print(f"🔄 Tentative d'analyse avec le modèle : {model_id}...")
                 response = client.models.generate_content(
                     model=model_id,
                     contents=prompt
                 )
                 if response:
-                    print(f"✅ Succès avec le modèle : {model_id}")
+                    print(f"✅ Biais AI : Succès avec {model_id}")
                     break
             except Exception as e:
                 last_error = str(e)
-                print(f"⚠️ Échec avec {model_id} (Quota ou indisponibilité)")
+                print(f"⚠️ Biais AI : Échec avec {model_id}")
                 continue
 
         if not response:
@@ -438,11 +468,11 @@ def analyze_bias_ai():
 
 if __name__ == '__main__':
     try:
-        print("🔍 Modèles disponibles pour votre clé :")
+        print("Modèles disponibles pour votre clé :")
         for m in client.models.list():
             print(f"  - {m.name}")
     except Exception as e:
-        print(f"⚠️ Impossible de lister les modèles : {e}")
+        print(f"Impossible de lister les modèles : {e}")
 
-    print("🧠 Modèle NLP et Intelligence Coach RSE activés sur le port 5000...")
+    print("Modèle NLP et Intelligence Coach RSE activés sur le port 5000...")
     app.run(port=5000, debug=True)
