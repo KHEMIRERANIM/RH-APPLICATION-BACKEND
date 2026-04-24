@@ -1,4 +1,6 @@
-package tn.esprit.rh_rse.config;
+package tn.esprit.rh_rse.config.jwt;
+// config/WebSocketConfig.java
+
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -18,7 +20,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws-tracking")
+        registry.addEndpoint("/ws-fraud")
                 .setAllowedOriginPatterns("*")
                 .withSockJS();
     }

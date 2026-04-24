@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import tn.esprit.rh_rse.entity.Avis;
+import tn.esprit.rh_rse.entity.AvisFormation;
 import tn.esprit.rh_rse.service.AvisService;
 
 import java.util.List;
@@ -20,17 +20,17 @@ public class AvisController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Avis>> getAll() {
+    public ResponseEntity<List<AvisFormation>> getAll() {
         return ResponseEntity.ok(avisService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Avis> getById(@PathVariable String id) {
+    public ResponseEntity<AvisFormation> getById(@PathVariable String id) {
         return ResponseEntity.ok(avisService.getById(id));
     }
 
     @GetMapping("/plat/{platId}")
-    public ResponseEntity<List<Avis>> getByPlat(@PathVariable String platId) {
+    public ResponseEntity<List<AvisFormation>> getByPlat(@PathVariable String platId) {
         return ResponseEntity.ok(avisService.getByPlat(platId));
     }
 
@@ -40,9 +40,9 @@ public class AvisController {
     }
 
     @PostMapping
-    public ResponseEntity<Avis> create(@Valid @RequestBody Avis avis) {
+    public ResponseEntity<AvisFormation> create(@Valid @RequestBody AvisFormation avisFormation) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(avisService.save(avis));
+                .body(avisService.save(avisFormation));
     }
 
     @DeleteMapping("/{id}")

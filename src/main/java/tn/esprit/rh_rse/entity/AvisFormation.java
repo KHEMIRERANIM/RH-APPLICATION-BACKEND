@@ -9,7 +9,7 @@ import java.time.LocalDate;
 
 @Document(collection = "avis")
 @Data @Builder @NoArgsConstructor @AllArgsConstructor
-public class Avis {
+public class AvisFormation {
 
     @Id
     private String id;

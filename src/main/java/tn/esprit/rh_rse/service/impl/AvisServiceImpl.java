@@ -2,8 +2,8 @@ package tn.esprit.rh_rse.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import tn.esprit.rh_rse.entity.Avis;
-import tn.esprit.rh_rse.repository.AvisRepository;
+import tn.esprit.rh_rse.entity.AvisFormation;
+import tn.esprit.rh_rse.repository.AvisFormationRepository;
 import tn.esprit.rh_rse.service.AvisService;
 
 import java.util.List;
@@ -11,45 +11,45 @@ import java.util.List;
 @Service @RequiredArgsConstructor
 public class AvisServiceImpl implements AvisService {
 
-    private final AvisRepository avisRepository;
+    private final AvisFormationRepository avisFormationRepository;
 
     @Override
-    public List<Avis> getAll() {
-        return avisRepository.findAll();
+    public List<AvisFormation> getAll() {
+        return avisFormationRepository.findAll();
     }
 
     @Override
-    public Avis getById(String id) {
-        return avisRepository.findById(id)
+    public AvisFormation getById(String id) {
+        return avisFormationRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Avis non trouvé : " + id));
     }
 
     @Override
-    public Avis save(Avis avis) {
+    public AvisFormation save(AvisFormation avisFormation) {
         // Un employé ne peut donner qu'un seul avis par plat
-        if (avisRepository.existsByUserIdAndPlatId(
-                avis.getUserId(), avis.getPlatId())) {
+        if (avisFormationRepository.existsByUserIdAndPlatId(
+                avisFormation.getUserId(), avisFormation.getPlatId())) {
             throw new RuntimeException("Vous avez déjà donné un avis pour ce plat !");
         }
-        return avisRepository.save(avis);
+        return avisFormationRepository.save(avisFormation);
     }
 
     @Override
     public void delete(String id) {
         getById(id);
-        avisRepository.deleteById(id);
+        avisFormationRepository.deleteById(id);
     }
 
     @Override
-    public List<Avis> getByPlat(String platId) {
-        return avisRepository.findByPlatId(platId);
+    public List<AvisFormation> getByPlat(String platId) {
+        return avisFormationRepository.findByPlatId(platId);
     }
 
     @Override
     public double getMoyenneNote(String platId) {
-        List<Avis> avisList = avisRepository.findByPlatId(platId);
-        return avisList.stream()
-                .mapToInt(Avis::getNote)
+        List<AvisFormation> avisFormationList = avisFormationRepository.findByPlatId(platId);
+        return avisFormationList.stream()
+                .mapToInt(AvisFormation::getNote)
                 .average()
                 .orElse(0.0);
     }

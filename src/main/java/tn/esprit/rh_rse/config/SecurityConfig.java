@@ -1,10 +1,11 @@
 package tn.esprit.rh_rse.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -12,111 +13,17 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import tn.esprit.rh_rse.config.jwt.JwtAuthEntryPoint;
 import tn.esprit.rh_rse.config.jwt.JwtFilter;
 
-import java.util.List;
-
-@Configuration
+@Configuration("formationSecurityConfig")
 @EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthEntryPoint jwtAuthEntryPoint;
     private final JwtFilter jwtFilter;
-
-    public SecurityConfig(JwtAuthEntryPoint jwtAuthEntryPoint, JwtFilter jwtFilter) {
-        this.jwtAuthEntryPoint = jwtAuthEntryPoint;
-        this.jwtFilter = jwtFilter;
-    }
-
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-        http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .csrf(csrf -> csrf.disable())
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .exceptionHandling(ex ->
-                        ex.authenticationEntryPoint(jwtAuthEntryPoint)
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // Public
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/commandes/export/**").permitAll()
-                        .requestMatchers("/ws-tracking/**").permitAll()
-                        .requestMatchers("/api/paiement/**").permitAll()
-                        .requestMatchers("/api/prediction/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/recrutement/offres/**").permitAll()
-                        
-                        // Carriere specific public
-                        .requestMatchers("/api/careers/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/mobility/*/analyze").permitAll()
-
-                        // fichiers statiques publics
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/favicon.ico").permitAll()
-
-                        // fichiers de certifications accessibles sans token
-                        .requestMatchers(HttpMethod.GET, "/api/evolution_plans/files/**").permitAll()
-
-                        // Users – Admin only
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasAnyRole("ADMIN", "EMPLOYE")
-                        .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/api/users/department/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/**").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
-
-                        // Mutuelle
-                        .requestMatchers("/api/avantages/stats/**").hasRole("ADMIN")
-                        .requestMatchers("/api/partenaires/**").authenticated()
-                        .requestMatchers("/api/commentaires/**").authenticated()
-                        .requestMatchers("/api/avantages-reservations/**").authenticated()
-                        .requestMatchers("/api/wishlist/**").authenticated()
-                        .requestMatchers("/api/mutuelle-notifications/**").authenticated()
-                        .requestMatchers("/api/notifications/carriere/**").authenticated()
-                        .requestMatchers("/api/transport-notifications/**").authenticated()
-
-                        // Carriere
-                        .requestMatchers("/api/rse/**").authenticated()
-                        .requestMatchers("/api/mobility/**").authenticated()
-                        .requestMatchers("/api/evolution_plans/**").authenticated()
-                        .requestMatchers("/api/career-plans/**").authenticated()
-
-                        .anyRequest().authenticated()
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        configuration.setAllowedOriginPatterns(List.of(
-                "http://localhost:4200",
-                "http://127.0.0.1:4200",
-                "http://localhost:5173",
-                "http://127.0.0.1:5173"
-        ));
-
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "Origin", "Accept", "X-Requested-With"));
-        configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(List.of("Authorization"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-
-        return source;
-    }
+    private final JwtAuthEntryPoint jwtAuthEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -124,7 +31,93 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .cors(Customizer.withDefaults())  // Utilise la configuration CORS globale
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex ->
+                        ex.authenticationEntryPoint(jwtAuthEntryPoint))
+                .authorizeHttpRequests(auth -> auth
+                        // OPTIONS requests (CORS preflight)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Public authentication endpoints
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/formations/disponibles").permitAll()
+                        .requestMatchers("/api/formations/search").permitAll()
+
+                        // ==================== AJOUT: FORMATEUR ENDPOINTS ====================
+                        .requestMatchers(HttpMethod.GET, "/api/formateurs").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.GET, "/api/formateurs/**").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.POST, "/api/formateurs").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.PUT, "/api/formateurs/**").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/formateurs/**").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers("/api/formateurs/*/formations/**").hasRole("ADMIN")
+
+                        // Document endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/formateurs/*/formations/*/documents").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/formateurs/formations/*/documents").hasAnyRole("ADMIN", "EMPLOYE","")
+                        .requestMatchers(HttpMethod.DELETE, "/api/formateurs/documents/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/documents/download/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET, "/api/documents/**").permitAll()  // AJOUTÉ pour les documents
+                        .requestMatchers(HttpMethod.POST, "/api/documents/**").permitAll() // AJOUTÉ pour les documents
+                        .requestMatchers(HttpMethod.DELETE, "/api/documents/**").permitAll() // AJOUTÉ pour les documents
+
+                        // Examen endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/formateurs/examens").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/formateurs/examens/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/formateurs/formations/*/examens").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/formateurs/examens/*").hasRole("ADMIN")
+
+                        // Validation endpoints
+                        .requestMatchers(HttpMethod.PUT, "/api/formateurs/inscriptions/*/valider").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/formateurs/inscriptions/*/evaluer").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/formateurs/inscriptions/*/examens/*/soumettre").hasRole("EMPLOYE")
+                        // ==================== FIN AJOUT ====================
+
+                        // Admin only endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/users/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/users/*").hasRole("ADMIN")
+                        .requestMatchers("/api/users/role/*").hasRole("ADMIN")
+                        .requestMatchers("/api/users/department/*").hasRole("ADMIN")
+
+                        // Users can access their own data
+                        .requestMatchers(HttpMethod.GET, "/api/users/*").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/password").hasAnyRole("ADMIN", "EMPLOYE", "CANDIDAT")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/deactivate").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/users/*/reactivate").hasRole("ADMIN")
+
+                        // Formation endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/formations/disponibles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/formations/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/formations").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/formations/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/formations/*").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/formations/*/toggle-active").hasRole("ADMIN")
+
+                        // Inscription endpoints
+                        .requestMatchers(HttpMethod.POST, "/api/formations/*/inscrire/*").hasAnyRole("EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.GET, "/api/formations/employe/*/inscriptions").hasAnyRole("EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.PATCH, "/api/formations/inscriptions/*/presence").hasAnyRole("EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/formations/inscriptions/*").hasAnyRole("EMPLOYE","FORMATEUR")
+
+                        // QR Code endpoint
+                        .requestMatchers(HttpMethod.GET, "/api/formations/*/qrcode").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        // Examen endpoints
+                        .requestMatchers(HttpMethod.GET, "/api/examens/**").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.POST, "/api/examens").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.POST, "/api/examens/*/soumettre").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.PUT, "/api/examens/**").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        .requestMatchers(HttpMethod.DELETE, "/api/examens/**").hasAnyRole("ADMIN", "EMPLOYE","FORMATEUR")
+                        // Any other request requires authentication
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
     }
 }
