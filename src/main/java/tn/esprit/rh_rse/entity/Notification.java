@@ -1,9 +1,6 @@
 package tn.esprit.rh_rse.entity;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
@@ -20,21 +17,15 @@ public class Notification {
     @Id
     private String id;
 
-    // From Mutuelle branch
     private String idUser;
-    private String idOffreAvantage;
-    private String titreOffreAvantage;
-    private String message;
 
-    // From Transport branch
-    private String destinataireId;
-    private String expediteurId;
-    private String trajetId;
-    private String reservationId;
-    private String contenu;
-
-    // Common
     private TypeNotification type;
+
+    private String idOffreAvantage;
+
+    private String titreOffreAvantage;
+
+    private String message;
 
     @Builder.Default
     private boolean lu = false;

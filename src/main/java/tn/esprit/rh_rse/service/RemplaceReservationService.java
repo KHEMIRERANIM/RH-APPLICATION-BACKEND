@@ -19,7 +19,7 @@ public class RemplaceReservationService {
     private final TrajetRepository trajetRepository;
     private final BusRepository busRepository;
     private final EmpreinteCarboneService empreinteCarboneService;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     @Transactional(rollbackFor = Exception.class)
     public Reservation remplacerReservation(RemplaceRequest request) {

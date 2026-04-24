@@ -39,4 +39,11 @@ public class User {
 
     private List<String> regime;
     private List<String> allergies;
+
+    // Champs RSE
+    @Builder.Default
+    private int rsePoints = 0;
+
+    @Builder.Default
+    private String rseLevel = "Débutant";
 }

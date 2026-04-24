@@ -16,7 +16,7 @@ import tn.esprit.rh_rse.entity.Reservation;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
 import tn.esprit.rh_rse.repository.ReservationRepository;
-import tn.esprit.rh_rse.service.NotificationService;
+import tn.esprit.rh_rse.service.NotificationTransportService;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +24,7 @@ public class TrajetServiceImpl implements TrajetService {
 
     private final TrajetRepository trajetRepository;
     private final ReservationRepository reservationRepository;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     @Override
     public List<Trajet> getAll() {

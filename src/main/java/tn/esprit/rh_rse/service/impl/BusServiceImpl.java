@@ -3,7 +3,7 @@ import tn.esprit.rh_rse.entity.ReservationNavette;
 import tn.esprit.rh_rse.entity.enums.StatutReservation;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
 import tn.esprit.rh_rse.repository.ReservationNavetteRepository;
-import tn.esprit.rh_rse.service.NotificationService;
+import tn.esprit.rh_rse.service.NotificationTransportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tn.esprit.rh_rse.dto.request.BusPackRequest;
@@ -23,7 +23,7 @@ public class BusServiceImpl implements BusService {
 
     private final BusRepository busRepository;
     private final ReservationNavetteRepository reservationNavetteRepository;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     @Override
     public List<Bus> getAll() {

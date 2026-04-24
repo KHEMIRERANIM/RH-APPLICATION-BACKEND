@@ -18,7 +18,7 @@ import tn.esprit.rh_rse.repository.ReservationRepository;
 import tn.esprit.rh_rse.repository.TrajetRepository;
 import tn.esprit.rh_rse.repository.VehiculeRepository;
 import tn.esprit.rh_rse.service.EmpreinteCarboneService;
-import tn.esprit.rh_rse.service.NotificationService;
+import tn.esprit.rh_rse.service.NotificationTransportService;
 import tn.esprit.rh_rse.service.ReservationService;
 
 import java.time.LocalDate;
@@ -35,7 +35,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final TrajetRepository trajetRepository;
     private final VehiculeRepository vehiculeRepository;
     private final EmpreinteCarboneService empreinteCarboneService;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     private ReservationResponse toResponse(Reservation r) {
         return ReservationResponse.builder()

@@ -46,13 +46,13 @@ MAX_CV_BYTES = 5 * 1024 * 1024
 GEMINI_API_KEY = "AIzaSyATWH3G3mB8NyyfDSpGii5jc7UKst_4iM4"
 client = genai.Client(api_key=GEMINI_API_KEY)
 
-# Modèles triés par priorité (Noms exacts détectés dans votre terminal)
+# Modèles triés par priorité
 MODELS_PRIORITY = [
-    'models/gemini-1.5-flash',
-    'models/gemini-2.0-flash',
-    'models/gemini-flash-latest',
-    'models/gemini-1.5-pro',
-    'models/gemini-pro-latest'
+    'gemini-2.5-flash',
+    'gemini-flash-latest',
+    'gemini-2.0-flash',
+    'gemini-2.5-pro',
+    'gemini-pro-latest'
 ]
 
 # VRAI DATASET (CORPUS D'ENTRAINEMENT) : Ce que cherche l'entreprise
@@ -381,7 +381,7 @@ def chat_coach():
                     break
             except Exception as e:
                 last_err = str(e)
-                print(f"⚠️ Chatbot : Échec avec {model_id} (Quota ou indisponibilité)")
+                print(f"⚠️ Chatbot : Échec avec {model_id} - Erreur exacte : {last_err}")
                 continue
 
         if not reply:

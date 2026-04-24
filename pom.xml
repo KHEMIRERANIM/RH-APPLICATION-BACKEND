@@ -3,6 +3,7 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
          https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -16,7 +17,7 @@
     <artifactId>rh_rse</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>rh_rse</name>
-    <description>rh_rse</description>
+    <description>Application RH - RSE</description>
 
     <properties>
         <java.version>17</java.version>
@@ -44,11 +45,13 @@
             **/*Exception.java,
             **/*Repository.java
         </sonar.coverage.exclusions>
+        <!-- Version stable et récente de PDFBox 3.x -->
+        <pdfbox.version>3.0.7</pdfbox.version>
     </properties>
 
     <dependencies>
 
-        <!-- MongoDB -->
+        <!-- Spring Boot Starters -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-mongodb</artifactId>
@@ -77,14 +80,6 @@
             <version>3.5.1</version>
         </dependency>
 
-
-        <!-- Apache PDFBox for OCR -->
-        <dependency>
-            <groupId>org.apache.pdfbox</groupId>
-            <artifactId>pdfbox</artifactId>
-            <version>2.0.28</version>
-        </dependency>
-
         <!-- Google Auth Library -->
         <dependency>
             <groupId>com.google.auth</groupId>
@@ -103,18 +98,13 @@
             <artifactId>google-oauth-client-jetty</artifactId>
             <version>1.34.1</version>
         </dependency>
-        <dependency>
-            <groupId>com.google.apis</groupId>
-            <artifactId>google-api-services-calendar</artifactId>
-            <version>v3-rev20220715-2.0.0</version>
-        </dependency>
+
         <!-- Web (REST API) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Security -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
@@ -139,6 +129,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- PDFBox -->
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>${pdfbox.version}</version>
+        </dependency>
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -178,12 +174,6 @@
             <version>5.5.13.3</version>
         </dependency>
 
-        <!-- Spring Boot Mail -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-
         <!-- OpenPDF for elegant PDF generation -->
         <dependency>
             <groupId>com.github.librepdf</groupId>
@@ -194,11 +184,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
     </dependencies>
@@ -235,6 +220,7 @@
             </plugins>
         </pluginManagement>
         <plugins>
+            <!-- Spring Boot Maven Plugin -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
@@ -289,6 +275,8 @@
                     <jvmTarget>1.8</jvmTarget>
                 </configuration>
             </plugin>
+
+            <!-- Maven Compiler avec Lombok -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

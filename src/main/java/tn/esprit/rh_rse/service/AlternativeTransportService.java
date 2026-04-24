@@ -19,7 +19,7 @@ public class AlternativeTransportService {
     private final TrajetRepository trajetRepository;
     private final ReservationRepository reservationRepository;
     private final BusRepository busRepository;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     @Transactional
     public void annulerTrajetConducteur(String trajetId) {

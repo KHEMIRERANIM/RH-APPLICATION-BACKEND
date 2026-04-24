@@ -11,7 +11,7 @@ import tn.esprit.rh_rse.entity.enums.StatutTrajet;
 import tn.esprit.rh_rse.entity.enums.TypeNotification;
 import tn.esprit.rh_rse.repository.BusRepository;
 import tn.esprit.rh_rse.repository.ReservationNavetteRepository;
-import tn.esprit.rh_rse.service.NotificationService;
+import tn.esprit.rh_rse.service.NotificationTransportService;
 import tn.esprit.rh_rse.service.ReservationNavetteService;
 
 import java.time.LocalDate;
@@ -30,7 +30,7 @@ public class ReservationNavetteServiceImpl implements ReservationNavetteService 
 
     private final ReservationNavetteRepository reservationNavetteRepository;
     private final BusRepository busRepository;
-    private final NotificationService notificationService;
+    private final NotificationTransportService notificationService;
 
     private ReservationNavetteResponse toResponse(ReservationNavette r) {
         return ReservationNavetteResponse.builder()

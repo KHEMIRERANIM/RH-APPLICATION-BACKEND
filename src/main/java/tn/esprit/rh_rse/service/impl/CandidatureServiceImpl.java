@@ -6,6 +6,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.data.mongodb.gridfs.GridFsTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -237,13 +238,13 @@ public class CandidatureServiceImpl implements CandidatureService {
 
             try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 18);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 18);
                 contentStream.newLineAtOffset(50, 750);
                 contentStream.showText("CONTRAT DE TRAVAIL - " + o.getTitre());
                 contentStream.endText();
 
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA, 12);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
                 contentStream.setLeading(15f);
                 contentStream.newLineAtOffset(50, 700);
 
@@ -286,14 +287,14 @@ public class CandidatureServiceImpl implements CandidatureService {
             try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
                 // Header
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 22);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_BOLD), 22);
                 contentStream.setNonStrokingColor(new Color(63, 81, 181)); // Indigo
                 contentStream.newLineAtOffset(50, 750);
                 contentStream.showText("Mes Conseils Career Coach IA");
                 contentStream.endText();
 
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA, 10);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 10);
                 contentStream.setNonStrokingColor(new Color(100, 100, 100));
                 contentStream.newLineAtOffset(50, 730);
                 contentStream.showText("Généré le " + LocalDateTime.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
@@ -307,7 +308,7 @@ public class CandidatureServiceImpl implements CandidatureService {
 
                 // Content
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA, 11);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
                 contentStream.setNonStrokingColor(Color.BLACK);
                 contentStream.setLeading(18f);
                 contentStream.newLineAtOffset(50, 680);
@@ -318,14 +319,14 @@ public class CandidatureServiceImpl implements CandidatureService {
                     if (sanitizedLine.isEmpty()) {
                         contentStream.newLine();
                     } else {
-                        drawWrappedText(contentStream, sanitizedLine, 500, PDType1Font.HELVETICA, 11);
+                        drawWrappedText(contentStream, sanitizedLine, 500, new PDType1Font(Standard14Fonts.FontName.HELVETICA), 11);
                     }
                 }
                 contentStream.endText();
                 
                 // Footer
                 contentStream.beginText();
-                contentStream.setFont(PDType1Font.HELVETICA_OBLIQUE, 9);
+                contentStream.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA_OBLIQUE), 9);
                 contentStream.setNonStrokingColor(new Color(150, 150, 150));
                 contentStream.newLineAtOffset(220, 50);
                 contentStream.showText("© RH_RSE - Plateforme de Recrutement Innovante");
