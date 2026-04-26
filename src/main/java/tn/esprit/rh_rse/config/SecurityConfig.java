@@ -48,6 +48,8 @@ public class SecurityConfig {
                         // ── PUBLIC AUTHENTICATION ─────────────────────────
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/chatbot/**").permitAll()
+                        .requestMatchers("/ws-tracking/**").permitAll()
+                        .requestMatchers("/ws-fraud/**").permitAll()
                         .requestMatchers("/api/formations/disponibles").permitAll()
                         .requestMatchers("/api/formations/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/formations/disponibles").permitAll()
