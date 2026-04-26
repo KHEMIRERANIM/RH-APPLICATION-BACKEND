@@ -37,16 +37,21 @@ public class AvantageReservationServiceImpl implements AvantageReservationServic
 
     @Override
     public AvantageReservation reserverOuModifier(String idUser, String idOffreAvantage, Integer nbPersonnes) {
+        if (nbPersonnes == null) nbPersonnes = 1;
         OffreAvantage offreAvantage = offreAvantageRepository.findById(idOffreAvantage)
                 .orElseThrow(() -> new OffreAvantageNotFoundException(idOffreAvantage));
 
         Optional<AvantageReservation> existante = reservationRepository
                 .findByIdUserAndIdOffreAvantageAndStatut(idUser, idOffreAvantage, StatutReservation.CONFIRMEE);
 
+        AvantageReservation reservationFinal;
         if (existante.isPresent()) {
-            return modifierReservationStandard(existante.get(), offreAvantage, nbPersonnes);
+            reservationFinal = modifierReservationStandard(existante.get(), offreAvantage, nbPersonnes);
+        } else {
+            reservationFinal = creerReservationStandard(idUser, offreAvantage, nbPersonnes);
         }
-        return creerReservationStandard(idUser, offreAvantage, nbPersonnes);
+        
+        return reservationFinal;
     }
 
     private AvantageReservation creerReservationStandard(String idUser, OffreAvantage offreAvantage, int nbPersonnes) {

@@ -28,7 +28,7 @@ public class WishlistServiceImpl implements WishlistService {
 
         // 2/ verifier si dzja en favori pour eviter les doublons (meme si gere par index, c'est plus propre)
         if (wishlistRepository.existsByIdUserAndIdOffreAvantage(idUser, idOffreAvantage)) {
-            throw new RuntimeException("Cette offreAvantage est déjà dans vos favoris !");
+            throw new RuntimeException("Cette offre est déjà dans vos favoris !");
         }
 
         // 3/determiner le prix actuel pour le snapshot

@@ -46,7 +46,7 @@ public class WishlistAlertService {
 
             if (prixActuel < dernierPrix) {
                 creerNotification(wishlist.getIdUser(), TypeNotification.PRIX_BAISSE, offreAvantage, 
-                        "Le prix de l'offreAvantage " + offreAvantage.getTitre() + " a baissé ! Il est passé de " + dernierPrix + " à " + prixActuel + " DT.");
+                        "Le prix de l'offre " + offreAvantage.getTitre() + " a baissé ! Il est passé de " + dernierPrix + " à " + prixActuel + " DT.");
                 wishlist.setDernierPrixConnu(prixActuel);
                 aMettreAJour = true;
             } else if (prixActuel > dernierPrix) {
@@ -80,7 +80,7 @@ public class WishlistAlertService {
                         // vu qu'on est en test à la minute, ça spammera si on ne vérifie pas l'existence récente).
                         if (!existeNotificationRecenteExpiration(wishlist.getIdUser(), offreAvantage.getId())) {
                             creerNotification(wishlist.getIdUser(), TypeNotification.EXPIRATION_PROCHE, offreAvantage,
-                                "Attention, l'offreAvantage " + offreAvantage.getTitre() + " expire dans " + joursRestants + " jours !");
+                                "Attention, l'offre " + offreAvantage.getTitre() + " expire dans " + joursRestants + " jours !");
                         }
                     }
                 }

@@ -35,7 +35,7 @@ public class AvantageReservationController {
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYE')")
     public ResponseEntity<AvantageReservation> reserverOuModifier(
             @RequestParam("idOffreAvantage") String idOffreAvantage,
-            @RequestParam("nbPersonnes") Integer nbPersonnes,
+            @RequestParam(value = "nbPersonnes", required = false) Integer nbPersonnes,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
         return ResponseEntity.ok(reservationService.reserverOuModifier(idUser, idOffreAvantage, nbPersonnes));
