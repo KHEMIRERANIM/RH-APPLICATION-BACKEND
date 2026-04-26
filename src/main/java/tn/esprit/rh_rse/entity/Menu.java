@@ -29,6 +29,8 @@ public class Menu {
     @Pattern(regexp = "brouillon|publie", message = "Statut invalide : brouillon ou publie")
     private String statut;
 
+    private String categorie;
+
     @Valid
     @Builder.Default
     private List<Plat> plats = new ArrayList<>();

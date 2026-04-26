@@ -84,4 +84,16 @@ public class CommandeController {
     public ResponseEntity<Map<String, Long>> getPlatsPlusCommandes() {
         return ResponseEntity.ok(commandeService.getPlatsPlusCommandes());
     }
+
+    // --- Endpoints Paiements (lecture seule) ---
+
+    @GetMapping("/paiements/en-attente")
+    public ResponseEntity<List<PaiementPlat>> getPaiementsEnAttente() {
+        return ResponseEntity.ok(paiementPlatService.getPaiementsEnAttente());
+    }
+
+    @GetMapping("/paiements/user/{userId}")
+    public ResponseEntity<List<PaiementPlat>> getPaiementsByUser(@PathVariable String userId) {
+        return ResponseEntity.ok(paiementPlatService.getPaiementsByUser(userId));
+    }
 }
