@@ -1,0 +1,12 @@
+target
+.mvn/wrapper
+.env
+.env.*
+*.log
+.git
+.gitignore
+README.md
+.DS_Store
+.vscode
+.idea
+*.iml
