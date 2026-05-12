@@ -1,0 +1,56 @@
+{
+  "action_verbs": [
+    "accelerate", "achieve", "acquire", "adapt", "address", "administer", "advance", "advise", "advocate", "align",
+    "analyze", "anticipate", "apply", "appoint", "appraise", "approve", "architect", "arrange", "ascertain", "assemble",
+    "assess", "assign", "assist", "attain", "audit", "augment", "author", "authorize", "automate", "balance",
+    "benchmark", "boost", "budget", "build", "calculate", "capitalize", "capture", "catalog", "centralize", "champion",
+    "chart", "clarify", "classify", "coach", "collaborate", "collect", "command", "communicate", "compare", "compile",
+    "complete", "compose", "compute", "conceive", "conceptualize", "conclude", "conduct", "configure", "conserve", "consolidate",
+    "construct", "consult", "continue", "contract", "control", "convert", "coordinate", "correlate", "counsel", "craft",
+    "create", "critique", "cultivate", "customize", "debug", "decide", "define", "delegate", "deliver", "demonstrate",
+    "deploy", "design", "detail", "detect", "determine", "develop", "devise", "diagnose", "differentiate", "direct",
+    "discover", "dispatch", "display", "distinguish", "distribute", "diversify", "document", "draft", "drive", "edit",
+    "educate", "effect", "elaborate", "elect", "eliminate", "embrace", "emphasize", "empower", "enact", "encourage",
+    "endeavor", "endorse", "enforce", "engage", "engineer", "enhance", "enlarge", "enlighten", "enlist", "ensure",
+    "entitle", "enumerate", "envision", "establish", "estimate", "evaluate", "examine", "exceed", "execute", "exercise",
+    "exhibit", "expand", "expedite", "experiment", "explain", "explore", "export", "expose", "extend", "extract",
+    "fabricate", "facilitate", "familiarize", "fashion", "forecast", "form", "formalize", "formulate", "fortify", "forward",
+    "foster", "found", "frame", "fulfill", "function", "furnish", "gain", "gather", "generate", "govern",
+    "graduate", "graph", "greet", "guide", "halt", "handle", "head", "help", "hire", "host",
+    "identify", "illuminate", "illustrate", "imagine", "implement", "import", "improve", "improvise", "inaugurate", "incentivize",
+    "include", "incorporate", "increase", "index", "indoctrinate", "induce", "influence", "inform", "initiate", "inject",
+    "innovate", "inspect", "inspire", "install", "instigate", "institute", "instruct", "insure", "integrate", "intensify",
+    "interpret", "interview", "introduce", "invent", "inventory", "investigate", "invest", "isolate", "itemize", "iterate"
+  ],
+  "connectors": [
+    "accordingly", "additionally", "afterwards", "albeit", "also", "alternatively", "analogously", "arguably", "as a result", "at the same time",
+    "besides", "consequently", "conversely", "correspondingly", "despite", "either", "equally", "even so", "finally", "firstly",
+    "for example", "for instance", "furthermore", "hence", "however", "in addition", "in contrast", "in fact", "in other words", "in particular",
+    "in short", "in summary", "incidentally", "indeed", "instead", "likewise", "meanwhile", "moreover", "namely", "nevertheless",
+    "nonetheless", "notably", "on the contrary", "on the other hand", "otherwise", "overall", "particularly", "previously", "rather", "regardless",
+    "secondly", "significantly", "similarly", "simultaneously", "so", "specifically", "subsequently", "such as", "that is to say", "then",
+    "thereafter", "therefore", "thus", "to conclude", "to illustrate", "to sum up", "ultimately", "whereas", "while", "yet"
+  ],
+  "business_terms": [
+    "accountability", "acquisition", "agenda", "alignment", "analysis", "assets", "benchmark", "best practices", "brand", "budget",
+    "business model", "capability", "capital", "cash flow", "collaboration", "commitment", "competency", "compliance", "consensus", "core values",
+    "corporate", "cost-effective", "culture", "customer-centric", "deadline", "deliverable", "diversification", "efficiency", "empowerment", "engagement",
+    "enterprise", "equity", "execution", "flexibility", "forecast", "framework", "growth", "high-performance", "impact", "implementation",
+    "incentive", "infrastructure", "innovation", "integrity", "interpersonal", "inventory", "investment", "key performance indicators", "kpi", "leadership",
+    "leverage", "logistics", "management", "market share", "mentorship", "milestone", "mission", "monitoring", "motivation", "negotiation",
+    "networking", "objectives", "operations", "optimization", "organizational", "outsourcing", "ownership", "paradigm", "partnership", "performance",
+    "perspective", "planning", "portfolio", "productivity", "profitability", "project management", "quality assurance", "quarterly", "redundancy", "reliability",
+    "resilience", "resourceful", "return on investment", "roi", "roadmap", "scalability", "scheduling", "scope", "shareholder", "stakeholder",
+    "strategic", "synergy", "tactical", "teamwork", "throughput", "timeline", "transparency", "turnover", "unit testing", "upskilling",
+    "validation", "value proposition", "vendor", "venture", "vertical", "viability", "vision", "workflow", "workforce", "zero-defect"
+  ],
+  "soft_skills": [
+    "adaptable", "articulate", "assertive", "attentive", "authentic", "calm", "charismatic", "collaborative", "composed", "confident",
+    "conscientious", "cooperative", "creative", "curious", "decisive", "dependable", "diligent", "diplomatic", "disciplined", "empathetic",
+    "energetic", "enthusiastic", "ethical", "flexible", "focused", "friendly", "honest", "imaginative", "independent", "insightful",
+    "intuitive", "loyal", "methodical", "motivating", "objective", "observant", "open-minded", "organized", "passionate", "patient",
+    "perceptive", "persistent", "persuasive", "polite", "positive", "practical", "proactive", "professional", "punctual", "rational",
+    "reliable", "resilient", "respectful", "responsible", "self-aware", "self-motivated", "sincere", "sociable", "strategic", "supportive",
+    "tactful", "thoughtful", "tolerant", "trustworthy", "unbiased", "versatile", "visionary", "well-presented", "willing", "hardworking"
+  ]
+}

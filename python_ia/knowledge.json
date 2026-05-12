@@ -1,0 +1,38 @@
+{
+  "rse_policy": {
+    "vision": "Devenir l'entreprise la plus inclusive et durable du secteur RH Tech d'ici 2030, en transformant le recrutement en un levier d'équité sociale.",
+    "environment": {
+      "digital_sobriety": "Optimisation du code pour réduire la consommation énergétique des serveurs. Utilisation de serveurs alimentés à 100% par des énergies renouvelables.",
+      "carbon_footprint": "Objectif Zéro Papier d'ici 2026. Réduction de l'empreinte carbone de 30% grâce au télétravail hybride et au forfait mobilité durable pour les cyclistes.",
+      "waste_management": "Recyclage systématique du matériel informatique via des associations solidaires (Dons de PC)."
+    },
+    "social_impact": {
+      "inclusion": "Politique de recrutement 100% Anti-Biais basée sur les compétences réelles (Skill-based hiring). Audit annuel de l'égalité salariale Femmes-Hommes.",
+      "diversity_stats": "Objectif de 40% de femmes dans les postes de Tech Leadership d'ici 2027.",
+      "disability_support": "Aménagement ergonomique complet des postes de travail et formation des managers à l'accueil du handicap."
+    },
+    "ethics_and_transparency": "Transparence totale sur les grilles salariales publiées en interne. Protection stricte des données personnelles (RGPD+ avec chiffrement de bout en bout)."
+  },
+  "hr_rules_and_benefits": {
+    "flexibility": {
+      "telework": "3 jours de télétravail par semaine autorisés pour tous les postes techniques. Horaires flexibles (Core hours 10h-16h).",
+      "work_from_anywhere": "Possibilité de travailler un mois par an depuis l'étranger (Workation)."
+    },
+    "career_development": {
+      "training_budget": "Budget individuel de 2000€ par an pour la formation et les certifications.",
+      "internal_mobility": "Priorité aux candidats internes pour tout nouveau poste ouvert."
+    },
+    "wellness": "Abonnement sport pris en charge à 50%. Sessions de méditation et de Yoga hebdomadaires au bureau. Accès à une plateforme de soutien psychologique anonyme."
+  },
+  "company_values": [
+    "Transparence (Dire ce qu'on fait, faire ce qu'on dit)",
+    "Agilité Durable (Rapidité sans compromettre la qualité ou l'humain)",
+    "Inclusion Radicale (Le talent n'a pas de sexe, d'âge ou d'origine)",
+    "Innovation Éthique (L'IA au service de l'humain, pas l'inverse)"
+  ],
+  "faq": {
+    "processus_recrutement": "En moyenne 3 étapes : Entretien RH, Test Technique/Cas Pratique, Rencontre avec l'équipe (Fit Check).",
+    "stack_technique": "Principalement Java/Spring Boot pour le backend, Angular pour le frontend, et Python pour nos moteurs d'IA.",
+    "periode_essai": "Généralement 4 mois, renouvelable une fois. Point de suivi tous les mois avec le manager."
+  }
+}

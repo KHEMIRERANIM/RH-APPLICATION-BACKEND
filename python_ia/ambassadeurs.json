@@ -1,0 +1,68 @@
+[
+  {
+    "id": "amb_1",
+    "nom": "Durant",
+    "prenom": "Thomas",
+    "poste": "Tech Lead Fullstack",
+    "departement": "IT & Développement",
+    "email": "thomas.d@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=thomas",
+    "bio": "Passionné par l'architecture propre, le Clean Code et le mentorat. Je travaille sur la partie Backend en Spring Boot 3 et Frontend en Angular 17. Je serai ravi de vous parler de notre stack technique et de nos rituels agiles !",
+    "conseil": "N'hésitez pas à poser des questions techniques précises, on adore la curiosité ici ! Montrez que vous vous intéressez à la qualité du code."
+  },
+  {
+    "id": "amb_2",
+    "nom": "Lemoine",
+    "prenom": "Sarah",
+    "poste": "Talent Acquisition Specialist",
+    "departement": "Ressources Humaines",
+    "email": "sarah.l@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=sarah",
+    "bio": "Mon rôle est de m'assurer que vous vous épanouissez chez nous, de l'onboarding au développement de carrière. La culture RSE et la diversité sont mes moteurs au quotidien.",
+    "conseil": "Soyez vous-même ! L'authenticité est la valeur n°1 de notre processus de recrutement. Nous cherchons des personnalités avant tout."
+  },
+  {
+    "id": "amb_3",
+    "nom": "Vidal",
+    "prenom": "Lucas",
+    "poste": "Senior UI/UX Designer",
+    "departement": "Design & Produit",
+    "email": "lucas.v@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=lucas",
+    "bio": "Je crée des expériences qui ont du sens et qui sont accessibles à tous (WWAG 2.1). Mon défi est de rendre la technologie humaine et inclusive. Hâte de voir votre créativité à l'œuvre.",
+    "conseil": "Préparez votre portfolio avec des cas concrets d'utilisation et expliquez votre démarche de recherche utilisateur, c'est ce qui nous parle le plus."
+  },
+  {
+    "id": "amb_4",
+    "nom": "Benali",
+    "prenom": "Amélie",
+    "poste": "Responsable Administrative & Financière",
+    "departement": "Finance & Administration",
+    "email": "amelie.b@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=amelie",
+    "bio": "Je veille à la bonne gestion des ressources de l'entreprise et à l'équité salariale. La transparence financière est au coeur de notre modèle de confiance.",
+    "conseil": "Pour les fonctions support, nous apprécions particulièrement la rigueur, l'autonomie et le sens du service aux équipes."
+  },
+  {
+    "id": "amb_5",
+    "nom": "Gauthier",
+    "prenom": "Kevin",
+    "poste": "Directeur Marketing Digital",
+    "departement": "Marketing & Communication",
+    "email": "kevin.g@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=kevin",
+    "bio": "Propulser notre marque et nos valeurs RSE à travers le monde est mon défi quotidien. Je gère des campagnes basées sur l'éthique et la data responsable.",
+    "conseil": "Montrez-nous comment vous analysez l'impact social et environnemental de vos actions marketing, au-delà des simples clics."
+  },
+  {
+    "id": "amb_6",
+    "nom": "Mansour",
+    "prenom": "Sofia",
+    "poste": "Business Development Manager",
+    "departement": "Commercial & Ventes",
+    "email": "sofia.m@rh-rse.com",
+    "photo": "https://i.pravatar.cc/150?u=sofia",
+    "bio": "J'accompagne nos clients vers des solutions de recrutement responsables. Pour moi, une vente réussie est une vente qui respecte l'éthique et les besoins réels du client.",
+    "conseil": "Préparez votre argumentaire sur la valeur ajoutée éthique de nos produits. Le 'Good for business, good for people' est notre mantra."
+  }
+]
