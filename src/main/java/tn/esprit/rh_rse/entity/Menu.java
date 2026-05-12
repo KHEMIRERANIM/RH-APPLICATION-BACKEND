@@ -1,7 +1,10 @@
 package tn.esprit.rh_rse.entity;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -18,7 +21,6 @@ public class Menu {
     private String id;
 
     @NotNull(message = "La date est obligatoire")
-    @FutureOrPresent(message = "La date ne peut pas être dans le passé")
     private LocalDate date;
 
     @NotBlank(message = "Le titre est obligatoire")

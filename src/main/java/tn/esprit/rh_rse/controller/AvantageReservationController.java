@@ -107,6 +107,7 @@ public class AvantageReservationController {
             @PathVariable("id") String id,
             HttpServletRequest httpRequest) {
         String idUser = extraireIdUser(httpRequest);
+
         
         // Fetch to ensure ownership
         AvantageReservation r = reservationService.getMesReservations(idUser).stream()

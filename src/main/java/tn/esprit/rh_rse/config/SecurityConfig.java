@@ -34,9 +34,35 @@ public class SecurityConfig {
                         // Public
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
+<<<<<<< Updated upstream
                         .requestMatchers("/api/commandes/export/**").permitAll()
 
                         // Users — Admin only
+=======
+                        .requestMatchers("/api/chatbot/**").permitAll()
+                        .requestMatchers("/ws-tracking/**").permitAll()
+                        .requestMatchers("/ws-fraud/**").permitAll()
+                        .requestMatchers("/ws-chat/**").permitAll()
+                        .requestMatchers("/api/formations/disponibles").permitAll()
+                        .requestMatchers("/api/formations/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/formations/disponibles").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/formations/*").permitAll()
+
+                        // ── RESTAURANT / MENUS ──────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/menus").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.GET, "/api/menus/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.POST, "/api/menus").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/menus/**").hasAnyRole("ADMIN", "EMPLOYE")
+                        .requestMatchers(HttpMethod.DELETE, "/api/menus/**").hasRole("ADMIN")
+
+                        // ── DOCUMENTS PUBLIC ────────────────────────────────
+                        .requestMatchers(HttpMethod.GET, "/api/documents/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/documents/**").permitAll()
+                        .requestMatchers(HttpMethod.DELETE, "/api/documents/**").permitAll()
+
+                        // ── USERS ──────────────────────────────────────────
+                        // Admin only
+>>>>>>> Stashed changes
                         .requestMatchers(HttpMethod.GET, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/users").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/users/role/**").hasRole("ADMIN")

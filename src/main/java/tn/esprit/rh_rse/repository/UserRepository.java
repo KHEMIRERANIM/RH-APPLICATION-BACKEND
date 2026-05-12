@@ -23,4 +23,11 @@ public interface UserRepository extends MongoRepository<User, String> {
     List<User> findByStatus(UserStatus status);
 
     List<User> findByRoleAndStatus(Role role, UserStatus status);
+<<<<<<< Updated upstream
+=======
+
+    List<User> findByPoste(String poste);
+
+    List<User> findByRoleNot(Role role);
+>>>>>>> Stashed changes
 }

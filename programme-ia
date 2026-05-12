@@ -1,0 +1,55 @@
+# Assistant de Voyage Intelligent (AI Travel Companion)
+
+L'objectif de cette fonctionnalité est d'enrichir l'expérience des employés en leur offrant un véritable "Compagnon de Voyage" généré par Intelligence Artificielle. Lorsqu'un employé consulte ou réserve un Séjour (Hôtel) ou un Voyage, il pourra obtenir un programme sur-mesure (jour par jour) ou des recommandations locales pertinentes, sans aucun effort.
+
+## L'idée Originale : "L'Itinéraire Magique" 🪄
+
+Plutôt que d'afficher un simple bloc de texte brut généré par un chatbot, nous allons demander à l'IA de nous renvoyer les données dans un format structuré (JSON). Le frontend Angular transformera ces données en une **Timeline Visuelle (Jour 1, Jour 2...)** très élégante, avec des icônes pour le matin, l'après-midi et le soir. 
+
+Pour un hôtel, l'IA agira comme un **Concierge Virtuel**, listant les 3 meilleurs restaurants à proximité et 3 activités incontournables.
+
+## Architecture Proposée
+
+### 1. Le Backend (Spring Boot)
+- **Nouveau Service : `AITravelGuideService`**
+  - Ce service sera responsable de construire le "Prompt" (la consigne pour l'IA) en utilisant les variables de votre offre (Catégorie, Lieu, Nom, Nombre de jours).
+  - Il fera un appel HTTP (REST) à une API d'Intelligence Artificielle.
+- **Choix de l'API IA :** 
+  - Je propose d'utiliser **Google Gemini API** (ou **OpenAI/Mistral** selon votre clé API disponible). L'avantage de Gemini est qu'il est très performant, gratuit pour le développement, et facile à intégrer via une simple requête HTTP POST en Java.
+- **Nouveau Endpoint :** `GET /api/avantages/ia/programme?idOffre=...`
+
+### 2. Le Frontend (Angular)
+- **UI/UX :** Dans la page de détails de l'offre (ou dans "Mes Réservations"), nous ajouterons un bouton premium avec un effet brillant : ✨ *Générer mon programme avec l'IA*.
+- **Composant : `TravelAiTimelineComponent`**
+  - Pendant le chargement, une belle animation (squelette ou spinner "L'IA réfléchit...") s'affichera.
+  - Une fois la réponse reçue, elle sera affichée sous forme de ligne de temps (Timeline) ou de cartes (Cards) stylisées.
+
+---
+
+## Fonctionnement Détaillé (Le Prompt Magique)
+
+Voici la logique que le backend enverra à l'IA (invisible pour l'utilisateur) :
+
+**Si l'offre est un VOYAGE (ex: 5 jours à Istanbul) :**
+> *"Tu es un guide touristique expert. Crée un itinéraire détaillé pour un voyage à [Lieu] intitulé [Nom de l'offre] pour une durée de [X] jours. Renvoie UNIQUEMENT un format JSON structuré contenant un tableau de jours avec : jour (int), titre_journée (string), activite_matin (string), activite_apresmidi (string)."*
+
+**Si l'offre est un HÔTEL (ex: Hôtel La Cigale Tabarka) :**
+> *"Tu es un concierge de luxe. Pour un client séjournant à l'hôtel [Nom de l'offre] situé à [Lieu], propose une liste de 3 attractions incontournables à proximité et 3 recommandations de restaurants locaux. Renvoie le résultat au format JSON structuré."*
+
+---
+
+> [!IMPORTANT]
+> ## User Review Required
+> J'ai besoin de votre validation sur les points suivants avant de commencer à coder :
+> 
+> 1. **L'API de Chatbot** : Avez-vous déjà une clé API (ex: OpenAI ChatGPT, Google Gemini, Groq) ? Si non, je vous guiderai pour créer une clé API gratuite Google Gemini en 2 minutes. C'est la meilleure option pour la soutenance.
+> 2. **Emplacement du bouton** : Préférez-vous que ce bouton "Générer le programme IA" soit visible **avant** la réservation (dans les détails de l'offre pour donner envie) ou **après** la réservation (dans l'espace "Mes réservations") ?
+> 3. **Format d'affichage** : Êtes-vous d'accord pour que l'on force l'IA à répondre en JSON pour qu'on puisse dessiner une belle interface (Timeline), plutôt que d'avoir un simple texte ennuyeux ?
+
+## Plan d'Action (Exécution)
+
+Si vous validez cette idée, voici comment nous allons procéder :
+1. **Étape 1 :** Création du service IA dans Spring Boot avec un client HTTP (RestTemplate ou WebClient) pour appeler l'API Gemini.
+2. **Étape 2 :** Création du contrôleur REST pour exposer cette fonctionnalité au frontend.
+3. **Étape 3 :** Côté Angular, création de l'interface visuelle (Timeline) et du bouton magique.
+4. **Étape 4 :** Test grandeur nature avec une vraie offre de votre base de données.
