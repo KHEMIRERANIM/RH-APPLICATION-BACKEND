@@ -1,0 +1,16 @@
+target
+.git
+.mvn/wrapper/maven-wrapper.jar
+build*.log
+uploads
+*.pyc
+__pycache__
+ia_microservice
+ia_service
+mobility-ai
+python_ia
+test_*.py
+scratch*.py
+response.json
+docker-compose-sonarqube.yml
+implementation_plan.md
